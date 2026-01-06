@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(pnpm --filter @octopus-controller/shared build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

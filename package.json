@@ -1,0 +1,26 @@
+{
+  "name": "octopus-energy-controller",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart home energy controller with Octopus Agile tariff integration",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean"
+  },
+  "keywords": [
+    "octopus-energy",
+    "smart-home",
+    "agile-tariff",
+    "tuya"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

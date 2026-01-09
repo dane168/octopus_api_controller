@@ -1,4 +1,4 @@
-import { useTodayPrices, useCheapestHours } from '../hooks/usePrices';
+import { useNext24HoursPrices, useCheapestHours } from '../hooks/usePrices';
 import { PriceChart } from '../components/prices/PriceChart';
 import { Clock, Zap } from 'lucide-react';
 import type { Price } from '@octopus-controller/shared';
@@ -55,7 +55,7 @@ function PriceSlot({ price, isCheapest }: { price: Price; isCheapest: boolean })
 }
 
 export function Prices() {
-  const { data: prices, isLoading } = useTodayPrices();
+  const { data: prices, isLoading } = useNext24HoursPrices();
   const { data: cheapestSlots } = useCheapestHours(3); // Cheapest 3 hours
 
   const cheapestIds = new Set(cheapestSlots?.map((p) => p.validFrom) || []);
@@ -72,14 +72,14 @@ export function Prices() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Prices</h1>
-        <p className="text-gray-500">Today's half-hourly electricity prices</p>
+        <p className="text-gray-500">Next 24 hours of half-hourly electricity prices</p>
       </div>
 
       {/* Chart */}
       <div className="card p-4 md:p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Price Chart</h2>
         {prices && prices.length > 0 ? (
-          <PriceChart prices={prices} />
+          <PriceChart prices={prices} cheapestSlots={cheapestIds} />
         ) : (
           <div className="h-64 flex items-center justify-center text-gray-500">
             No price data available

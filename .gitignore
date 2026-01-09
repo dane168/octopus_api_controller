@@ -39,3 +39,7 @@ coverage/
 # Temp files
 tmp/
 temp/
+
+
+.venv/
+.venv

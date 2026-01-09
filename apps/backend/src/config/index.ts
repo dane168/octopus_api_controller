@@ -9,6 +9,12 @@ const envSchema = z.object({
   OCTOPUS_MPAN: z.string().optional(),
   OCTOPUS_SERIAL: z.string().optional(),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  // Google OAuth
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  // JWT
+  JWT_SECRET: z.string().default('change-this-in-production-please'),
+  // Frontend URL for CORS
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
 
 export type Config = z.infer<typeof envSchema>;

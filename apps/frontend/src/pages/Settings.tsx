@@ -10,22 +10,51 @@ export function Settings() {
   const refreshPrices = useRefreshPrices();
 
   const [region, setRegion] = useState('');
+  const [octopusApiKey, setOctopusApiKey] = useState('');
+  const [octopusMpan, setOctopusMpan] = useState('');
+  const [octopusSerial, setOctopusSerial] = useState('');
   const [saved, setSaved] = useState(false);
 
+  // Track if a key is stored (masked) and show it in the UI
+  const [apiKeyMasked, setApiKeyMasked] = useState<string | null>(null);
+  const [apiKeyRaw, setApiKeyRaw] = useState<string | null>(null);
   useEffect(() => {
-    if (settings?.region) {
-      setRegion(settings.region);
+    if (settings?.region) setRegion(settings.region);
+    if (settings?.octopusApiKey) {
+      let raw = settings.octopusApiKey;
+      if (raw.startsWith('***')) {
+        // Can't know real length, so just show as is
+        setApiKeyMasked(raw);
+        setApiKeyRaw(null);
+        setOctopusApiKey('');
+      } else {
+        setApiKeyRaw(raw);
+        if (raw.length > 4) {
+          setApiKeyMasked('*'.repeat(raw.length - 4) + raw.slice(-4));
+        } else {
+          setApiKeyMasked(raw);
+        }
+        setOctopusApiKey(raw);
+      }
+    } else {
+      setApiKeyMasked(null);
+      setApiKeyRaw(null);
+      setOctopusApiKey('');
     }
+    if (settings?.octopusMpan) setOctopusMpan(settings.octopusMpan);
+    if (settings?.octopusSerial) setOctopusSerial(settings.octopusSerial);
   }, [settings]);
 
   const handleSave = async () => {
     if (!region) return;
-
-    await updateMutation.mutateAsync({ region });
+    const updates: any = { region, octopusMpan, octopusSerial };
+    // Only send API key if user entered a new value (not blank)
+    if (octopusApiKey) {
+      updates.octopusApiKey = octopusApiKey;
+    }
+    await updateMutation.mutateAsync(updates);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
-
-    // Refresh prices with new region
     refreshPrices.mutate();
   };
 
@@ -110,16 +139,71 @@ export function Settings() {
         </div>
       </div>
 
-      {/* API Settings (future) */}
+      {/* Octopus API Settings */}
       <div className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Octopus API (Optional)</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Add your Octopus API key to access your consumption data. This is optional -
-          price data works without authentication.
-        </p>
-        <p className="text-sm text-gray-400 italic">
-          Consumption tracking will be added in a future update.
-        </p>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Octopus API Settings</h2>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="octopusApiKey" className="label">API Key <span className="text-red-500">*</span></label>
+            <div className="flex items-center gap-2">
+              <input
+                id="octopusApiKey"
+                type="text"
+                className="input"
+                value={octopusApiKey}
+                onChange={e => setOctopusApiKey(e.target.value)}
+                placeholder={apiKeyMasked ? apiKeyMasked : 'sk_live_...'}
+                required
+                autoComplete="off"
+              />
+              {apiKeyMasked && !octopusApiKey && (
+                <span className="text-xs text-gray-500">(saved)</span>
+              )}
+            </div>
+            {apiKeyMasked && !octopusApiKey && (
+              <p className="text-xs text-gray-400 mt-1">API key is saved: <span className="font-mono">{apiKeyMasked}</span></p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">Required for consumption data and some price endpoints.</p>
+          </div>
+          <div>
+            <label htmlFor="octopusMpan" className="label">MPAN</label>
+            <input
+              id="octopusMpan"
+              type="text"
+              className="input"
+              value={octopusMpan}
+              onChange={e => setOctopusMpan(e.target.value)}
+              placeholder="e.g. 1300053174403"
+            />
+          </div>
+          <div>
+            <label htmlFor="octopusSerial" className="label">Meter Serial</label>
+            <input
+              id="octopusSerial"
+              type="text"
+              className="input"
+              value={octopusSerial}
+              onChange={e => setOctopusSerial(e.target.value)}
+              placeholder="e.g. 18L2269348"
+            />
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={!region || updateMutation.isPending}
+            className="btn btn-primary flex items-center gap-2"
+          >
+            {saved ? (
+              <>
+                <Check className="w-4 h-4" />
+                Saved!
+              </>
+            ) : updateMutation.isPending ? (
+              'Saving...'
+            ) : (
+              'Save Settings'
+            )}
+          </button>
+        </div>
       </div>
 
       {/* About */}

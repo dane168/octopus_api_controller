@@ -1,18 +1,23 @@
 import { RefreshCw } from 'lucide-react';
-import { useTodayPrices, useCurrentPrice, useRefreshPrices } from '../hooks/usePrices';
+import { useNext24HoursPrices, useCurrentPrice, useRefreshPrices, useCheapestHours } from '../hooks/usePrices';
 import { useSettings } from '../hooks/useSettings';
 import { PriceChart } from '../components/prices/PriceChart';
 import { CurrentPrice } from '../components/prices/CurrentPrice';
+import type { Price } from '@octopus-controller/shared';
 
 export function Dashboard() {
-  const { data: prices, isLoading: pricesLoading } = useTodayPrices();
+  const { data: prices, isLoading: pricesLoading } = useNext24HoursPrices();
   const { data: currentPrice, isLoading: currentLoading } = useCurrentPrice();
   const { data: settings } = useSettings();
+  const { data: cheapestSlots } = useCheapestHours(3); // Cheapest 3 hours
   const refreshMutation = useRefreshPrices();
 
   // Find next price
   const now = new Date();
   const nextPrice = prices?.find((p) => new Date(p.validFrom) > now);
+
+  // Create set of cheapest slot IDs
+  const cheapestIds = new Set<string>(cheapestSlots?.map((p: Price) => p.validFrom) || []);
 
   // Calculate stats
   const stats = prices
@@ -71,13 +76,13 @@ export function Dashboard() {
 
       {/* Price chart */}
       <div className="card p-4 md:p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Prices</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Next 24 Hours</h2>
         {pricesLoading ? (
           <div className="h-64 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         ) : prices && prices.length > 0 ? (
-          <PriceChart prices={prices} currentTime={now} />
+          <PriceChart prices={prices} currentTime={now} cheapestSlots={cheapestIds} />
         ) : (
           <div className="h-64 flex items-center justify-center text-gray-500">
             No price data available. Try refreshing.

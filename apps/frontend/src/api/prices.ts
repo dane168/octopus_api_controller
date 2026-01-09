@@ -38,6 +38,23 @@ export async function getTodayPrices(region?: string): Promise<Price[]> {
   return data.prices;
 }
 
+export async function getNext24HoursPrices(region?: string): Promise<Price[]> {
+  const now = new Date();
+  // Round down to the current half-hour slot to include the current window
+  const currentSlotStart = new Date(now);
+  currentSlotStart.setMinutes(now.getMinutes() < 30 ? 0 : 30, 0, 0);
+
+  const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const { data } = await api.get<PricesResponse>('/prices', {
+    params: {
+      from: currentSlotStart.toISOString(),
+      to: in24Hours.toISOString(),
+      ...(region ? { region } : {}),
+    },
+  });
+  return data.prices;
+}
+
 export async function getCheapestHours(params: {
   hours: number;
   from?: string;

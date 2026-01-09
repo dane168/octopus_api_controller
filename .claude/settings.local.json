@@ -4,7 +4,10 @@
       "Bash(dir:*)",
       "Bash(pnpm --filter @octopus-controller/shared build:*)",
       "Bash(npx tsc:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(pnpm add:*)",
+      "Bash(node --version:*)",
+      "Bash(cat:*)"
     ]
   }
 }

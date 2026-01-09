@@ -1,7 +1,9 @@
+import type { DeviceAction } from './device.js';
+
 /**
  * Schedule types for device automation
  */
-export type ScheduleType = 'price_threshold' | 'cheapest_hours' | 'time_range';
+export type ScheduleType = 'price_threshold' | 'cheapest_hours' | 'time_range' | 'time_slots';
 
 /**
  * Price threshold schedule - turn on when price is below threshold
@@ -38,16 +40,37 @@ export interface TimeRange {
 }
 
 /**
+ * Time slot - represents a 30-minute price window
+ */
+export interface TimeSlot {
+  start: string;              // HH:MM format (e.g., "17:30")
+  end: string;                // HH:MM format (e.g., "18:00")
+}
+
+/**
+ * Time slots schedule - run during specific half-hour price windows
+ * This is the primary schedule type for manual window selection
+ */
+export interface TimeSlotsConfig {
+  type: 'time_slots';
+  slots: TimeSlot[];          // Selected time slots
+  action: DeviceAction;       // 'on', 'off', or 'toggle'
+  repeat: 'once' | 'daily';   // Run once or repeat daily
+  date?: string;              // ISO date for 'once' schedules (YYYY-MM-DD)
+}
+
+/**
  * Union type for all schedule configurations
  */
-export type ScheduleConfig = PriceThresholdConfig | CheapestHoursConfig | TimeRangeConfig;
+export type ScheduleConfig = PriceThresholdConfig | CheapestHoursConfig | TimeRangeConfig | TimeSlotsConfig;
 
 /**
  * Schedule entity stored in database
+ * Note: Now supports multiple devices per schedule
  */
 export interface Schedule {
   id: string;
-  deviceId: string;
+  deviceIds: string[];        // Array of device IDs (supports multiple devices)
   name: string;
   enabled: boolean;
   config: ScheduleConfig;
@@ -56,17 +79,25 @@ export interface Schedule {
 }
 
 /**
+ * Device info for schedule display
+ */
+export interface ScheduleDeviceInfo {
+  id: string;
+  name: string;
+}
+
+/**
  * Schedule with device info for display
  */
-export interface ScheduleWithDevice extends Schedule {
-  deviceName: string;
+export interface ScheduleWithDevices extends Schedule {
+  devices: ScheduleDeviceInfo[];
 }
 
 /**
  * Input for creating a new schedule
  */
 export interface CreateScheduleInput {
-  deviceId: string;
+  deviceIds: string[];        // Array of device IDs
   name: string;
   config: ScheduleConfig;
 }
@@ -76,6 +107,7 @@ export interface CreateScheduleInput {
  */
 export interface UpdateScheduleInput {
   name?: string;
+  deviceIds?: string[];
   config?: ScheduleConfig;
   enabled?: boolean;
 }
@@ -87,7 +119,7 @@ export interface ScheduleLog {
   id?: number;
   scheduleId: string;
   deviceId: string;
-  action: 'on' | 'off';
+  action: 'on' | 'off' | 'toggle';
   triggerReason: string;
   success: boolean;
   errorMessage?: string;
@@ -98,6 +130,15 @@ export interface ScheduleLog {
  * Schedule evaluation result
  */
 export interface ScheduleEvaluationResult {
-  shouldBeOn: boolean;
+  shouldExecute: boolean;
+  action: DeviceAction;
   reason: string;
+}
+
+/**
+ * Enriched schedule log with device and schedule names for display
+ */
+export interface EnrichedScheduleLog extends ScheduleLog {
+  scheduleName: string;
+  deviceName: string;
 }

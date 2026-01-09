@@ -1,18 +1,26 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import type { AppSettings } from '@octopus-controller/shared';
 import { config } from '../config/index.js';
 
 const DEFAULT_SETTINGS: AppSettings = {
   region: '',
+  octopusApiKey: '',
+  octopusMpan: '',
+  octopusSerial: '',
 };
 
 /**
- * Get all settings
+ * Get all settings for a user
  */
-export function getSettings(): AppSettings {
+export function getSettings(userId?: string): AppSettings {
   const db = getDb();
-  const rows = db.select().from(schema.settings).all();
+  let rows;
+  if (userId) {
+    rows = db.select().from(schema.settings).where(eq(schema.settings.userId, userId)).all();
+  } else {
+    rows = db.select().from(schema.settings).all();
+  }
 
   const settings = { ...DEFAULT_SETTINGS };
 
@@ -22,43 +30,44 @@ export function getSettings(): AppSettings {
     }
   }
 
-  // Override with env vars if set
+  // Override region with env var if set (for legacy compatibility)
   if (config.OCTOPUS_REGION) {
     settings.region = config.OCTOPUS_REGION;
   }
-  if (config.OCTOPUS_API_KEY) {
-    settings.octopusApiKey = config.OCTOPUS_API_KEY;
-  }
-  if (config.OCTOPUS_MPAN) {
-    settings.octopusMpan = config.OCTOPUS_MPAN;
-  }
-  if (config.OCTOPUS_SERIAL) {
-    settings.octopusSerial = config.OCTOPUS_SERIAL;
-  }
+  // API key, MPAN, and Serial are now only from DB, not .env
 
   return settings;
 }
 
 /**
- * Get a single setting
+ * Get a single setting for a user
  */
-export function getSetting(key: string): string | null {
+export function getSetting(key: string, userId?: string): string | null {
   const db = getDb();
-  const result = db
-    .select()
-    .from(schema.settings)
-    .where(eq(schema.settings.key, key))
-    .get();
+  let result;
+  if (userId) {
+    result = db
+      .select()
+      .from(schema.settings)
+      .where(and(eq(schema.settings.key, key), eq(schema.settings.userId, userId)))
+      .get();
+  } else {
+    result = db
+      .select()
+      .from(schema.settings)
+      .where(eq(schema.settings.key, key))
+      .get();
+  }
 
   return result?.value ?? null;
 }
 
 /**
- * Set a single setting
+ * Set a single setting for a user
  */
-export function setSetting(key: string, value: string): void {
+export function setSetting(key: string, value: string, userId: string): void {
   const db = getDb();
-  const existing = getSetting(key);
+  const existing = getSetting(key, userId);
 
   if (existing !== null) {
     db.update(schema.settings)
@@ -66,11 +75,12 @@ export function setSetting(key: string, value: string): void {
         value,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(schema.settings.key, key))
+      .where(and(eq(schema.settings.key, key), eq(schema.settings.userId, userId)))
       .run();
   } else {
     db.insert(schema.settings)
       .values({
+        userId,
         key,
         value,
         updatedAt: new Date().toISOString(),
@@ -80,12 +90,12 @@ export function setSetting(key: string, value: string): void {
 }
 
 /**
- * Update multiple settings
+ * Update multiple settings for a user
  */
-export function updateSettings(updates: Partial<AppSettings>): void {
+export function updateSettings(updates: Partial<AppSettings>, userId: string): void {
   for (const [key, value] of Object.entries(updates)) {
     if (value !== undefined) {
-      setSetting(key, value);
+      setSetting(key, value, userId);
     }
   }
 }

@@ -13,6 +13,7 @@ import type { Price } from '@octopus-controller/shared';
 interface PriceChartProps {
   prices: Price[];
   currentTime?: Date;
+  cheapestSlots?: Set<string>; // Set of validFrom timestamps for cheapest slots
 }
 
 function getBarColor(price: number): string {
@@ -60,13 +61,27 @@ function CustomTooltip({ active, payload }: TooltipProps) {
   );
 }
 
-export function PriceChart({ prices, currentTime = new Date() }: PriceChartProps) {
+export function PriceChart({ prices, currentTime = new Date(), cheapestSlots = new Set() }: PriceChartProps) {
   // Find current price index
   const currentIndex = prices.findIndex((p) => {
     const from = new Date(p.validFrom);
     const to = new Date(p.validTo);
     return currentTime >= from && currentTime < to;
   });
+
+  // Calculate average price
+  const averagePrice = prices.reduce((sum, p) => sum + p.valueIncVat, 0) / prices.length;
+
+  // Calculate min/max for proper Y-axis domain
+  const minPrice = Math.min(...prices.map(p => p.valueIncVat));
+  const maxPrice = Math.max(...prices.map(p => p.valueIncVat));
+
+  // Add padding to domain to ensure bars don't touch edges
+  const padding = (maxPrice - minPrice) * 0.1 || 2;
+  const yDomain: [number, number] = [
+    Math.floor(minPrice - padding),
+    Math.ceil(maxPrice + padding)
+  ];
 
   return (
     <div className="w-full h-64 md:h-80">
@@ -81,6 +96,7 @@ export function PriceChart({ prices, currentTime = new Date() }: PriceChartProps
             axisLine={{ stroke: '#e5e7eb' }}
           />
           <YAxis
+            domain={yDomain}
             tick={{ fontSize: 11 }}
             tickFormatter={formatPrice}
             tickLine={false}
@@ -90,16 +106,35 @@ export function PriceChart({ prices, currentTime = new Date() }: PriceChartProps
           <Tooltip content={<CustomTooltip />} />
           {/* Reference line at 0 for negative prices */}
           <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="3 3" />
+          {/* Average price line */}
+          <ReferenceLine
+            y={averagePrice}
+            stroke="#6366f1"
+            strokeDasharray="5 5"
+            strokeWidth={2}
+            label={{
+              value: `Avg: ${averagePrice.toFixed(1)}p`,
+              position: 'top',
+              fill: '#6366f1',
+              fontSize: 11,
+              fontWeight: 600
+            }}
+          />
           <Bar dataKey="valueIncVat" radius={[2, 2, 0, 0]}>
-            {prices.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={getBarColor(entry.valueIncVat)}
-                opacity={index === currentIndex ? 1 : 0.7}
-                stroke={index === currentIndex ? '#1f2937' : 'transparent'}
-                strokeWidth={index === currentIndex ? 2 : 0}
-              />
-            ))}
+            {prices.map((entry, index) => {
+              const isCheapest = cheapestSlots.has(entry.validFrom);
+              const isCurrent = index === currentIndex;
+
+              return (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={getBarColor(entry.valueIncVat)}
+                  opacity={isCurrent ? 1 : 0.7}
+                  stroke={isCheapest ? '#10b981' : isCurrent ? '#1f2937' : 'transparent'}
+                  strokeWidth={isCheapest ? 3 : isCurrent ? 2 : 0}
+                />
+              );
+            })}
           </Bar>
         </BarChart>
       </ResponsiveContainer>

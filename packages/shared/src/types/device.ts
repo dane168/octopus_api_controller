@@ -1,7 +1,7 @@
 /**
  * Supported device types
  */
-export type DeviceType = 'switch' | 'plug' | 'heater' | 'thermostat' | 'hot_water';
+export type DeviceType = 'switch' | 'plug' | 'light' | 'heater' | 'thermostat' | 'hot_water';
 
 /**
  * Supported device protocols/adapters

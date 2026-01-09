@@ -1,4 +1,5 @@
 import { priceFetchJob, priceRefreshJob } from './price-fetch.js';
+import { scheduleExecutorJob } from './schedule-executor.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -13,7 +14,9 @@ export function startJobs() {
   priceRefreshJob.start();
   logger.info('Price refresh job scheduled (every 6 hours)');
 
-  // Schedule executor will be added in Phase 3
+  // Start schedule executor (every minute)
+  scheduleExecutorJob.start();
+  logger.info('Schedule executor started (runs every minute)');
 }
 
 /**
@@ -22,5 +25,6 @@ export function startJobs() {
 export function stopJobs() {
   priceFetchJob.stop();
   priceRefreshJob.stop();
+  scheduleExecutorJob.stop();
   logger.info('All jobs stopped');
 }

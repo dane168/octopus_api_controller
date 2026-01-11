@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "vercel-build": "pnpm --filter @octopus-controller/shared build && pnpm build",
     "start": "node dist/index.js",
     "clean": "rimraf dist"
   },

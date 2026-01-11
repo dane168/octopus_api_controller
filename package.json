@@ -7,7 +7,7 @@
     "dev": "pnpm -r --parallel dev",
     "dev:backend": "pnpm --filter backend dev",
     "dev:frontend": "pnpm --filter frontend dev",
-    "build": "pnpm -r build",
+    "build": "pnpm --filter @octopus-controller/shared build && pnpm --filter backend build && pnpm --filter frontend build",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean"
   },

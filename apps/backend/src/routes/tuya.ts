@@ -321,7 +321,7 @@ router.post('/spaces/:spaceId/import', async (req, res) => {
     };
 
     // Get existing devices once before the loop
-    const existingDevices = devicesRepo.getAllDevices(userId);
+    const existingDevices = await devicesRepo.getAllDevices(userId);
 
     for (const device of tuyaDevices) {
       // Check if device already exists
@@ -336,7 +336,7 @@ router.post('/spaces/:spaceId/import', async (req, res) => {
       const deviceType = (categoryToType[device.category] || 'plug') as DeviceType;
 
       // Create the device
-      devicesRepo.createDevice({
+      await devicesRepo.createDevice({
         name: device.custom_name || device.name,
         type: deviceType,
         config: {

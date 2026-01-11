@@ -34,7 +34,7 @@ export async function fetchAgileprices(options: FetchPricesOptions): Promise<Pri
   if (periodTo) params.period_to = periodTo;
 
   // Get API key from DB settings for this user
-  const settings = getSettings(userId);
+  const settings = await getSettings(userId);
   const apiKey = settings.octopusApiKey;
   if (!apiKey) {
     logger.error({ region }, 'Octopus API Key is required but missing in settings');

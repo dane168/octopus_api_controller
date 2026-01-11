@@ -13,7 +13,7 @@ export async function upsertPrices(pricesToInsert: Price[]): Promise<number> {
   for (const price of pricesToInsert) {
     try {
       // Check if price exists
-      const existing = db
+      const existingRows = await db
         .select()
         .from(schema.prices)
         .where(
@@ -21,30 +21,29 @@ export async function upsertPrices(pricesToInsert: Price[]): Promise<number> {
             eq(schema.prices.validFrom, price.validFrom),
             eq(schema.prices.region, price.region)
           )
-        )
-        .get();
+        );
+
+      const existing = existingRows.length > 0 ? existingRows[0] : null;
 
       if (existing) {
         // Update existing
-        db.update(schema.prices)
+        await db.update(schema.prices)
           .set({
             validTo: price.validTo,
             valueIncVat: price.valueIncVat,
             valueExcVat: price.valueExcVat,
           })
-          .where(eq(schema.prices.id, existing.id))
-          .run();
+          .where(eq(schema.prices.id, existing.id));
       } else {
         // Insert new
-        db.insert(schema.prices)
+        await db.insert(schema.prices)
           .values({
             validFrom: price.validFrom,
             validTo: price.validTo,
             valueIncVat: price.valueIncVat,
             valueExcVat: price.valueExcVat,
             region: price.region,
-          })
-          .run();
+          });
         inserted++;
       }
     } catch (error) {
@@ -58,11 +57,11 @@ export async function upsertPrices(pricesToInsert: Price[]): Promise<number> {
 /**
  * Get prices within a time range
  */
-export function getPrices(options: {
+export async function getPrices(options: {
   from?: string;
   to?: string;
   region?: string;
-}): Price[] {
+}): Promise<Price[]> {
   const db = getDb();
   const { from, to, region } = options;
 
@@ -83,7 +82,7 @@ export function getPrices(options: {
     query = query.where(and(...conditions)) as typeof query;
   }
 
-  const results = query.orderBy(asc(schema.prices.validFrom)).all();
+  const results = await query.orderBy(asc(schema.prices.validFrom));
 
   return results.map((row) => ({
     id: row.id,
@@ -98,7 +97,7 @@ export function getPrices(options: {
 /**
  * Get current price (price valid at current time)
  */
-export function getCurrentPrice(region?: string): Price | null {
+export async function getCurrentPrice(region?: string): Promise<Price | null> {
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -111,16 +110,16 @@ export function getCurrentPrice(region?: string): Price | null {
     conditions.push(eq(schema.prices.region, region));
   }
 
-  const result = db
+  const results = await db
     .select()
     .from(schema.prices)
     .where(and(...conditions))
     .orderBy(desc(schema.prices.validFrom))
-    .limit(1)
-    .get();
+    .limit(1);
 
-  if (!result) return null;
+  if (results.length === 0) return null;
 
+  const result = results[0];
   return {
     id: result.id,
     validFrom: result.validFrom,
@@ -134,17 +133,17 @@ export function getCurrentPrice(region?: string): Price | null {
 /**
  * Get cheapest hours within a time window
  */
-export function getCheapestHours(options: {
+export async function getCheapestHours(options: {
   hours: number;
   from?: string;
   to?: string;
   region?: string;
   consecutive?: boolean;
-}): Price[] {
+}): Promise<Price[]> {
   const { hours, from, to, region, consecutive = false } = options;
 
   // Get all prices in the window
-  const allPrices = getPrices({ from, to, region });
+  const allPrices = await getPrices({ from, to, region });
 
   if (allPrices.length === 0) return [];
 
@@ -180,7 +179,7 @@ export function getCheapestHours(options: {
 /**
  * Get today's prices
  */
-export function getTodayPrices(region?: string): Price[] {
+export async function getTodayPrices(region?: string): Promise<Price[]> {
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
@@ -198,15 +197,24 @@ export function getTodayPrices(region?: string): Price[] {
 /**
  * Delete old prices (older than specified days)
  */
-export function deleteOldPrices(daysOld: number = 7): number {
+export async function deleteOldPrices(daysOld: number = 7): Promise<number> {
   const db = getDb();
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysOld);
 
-  const result = db
-    .delete(schema.prices)
-    .where(lte(schema.prices.validTo, cutoff.toISOString()))
-    .run();
+  // Check if there are any old prices first
+  const oldPrices = await db
+    .select()
+    .from(schema.prices)
+    .where(lte(schema.prices.validTo, cutoff.toISOString()));
 
-  return result.changes;
+  if (oldPrices.length === 0) {
+    return 0;
+  }
+
+  await db
+    .delete(schema.prices)
+    .where(lte(schema.prices.validTo, cutoff.toISOString()));
+
+  return oldPrices.length;
 }

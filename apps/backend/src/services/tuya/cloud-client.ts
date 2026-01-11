@@ -154,7 +154,7 @@ async function directTuyaApiTest(
     }
   });
 
-  return response.json();
+  return response.json() as Promise<{ success: boolean; code?: number; msg?: string; result?: any }>;
 }
 
 /**

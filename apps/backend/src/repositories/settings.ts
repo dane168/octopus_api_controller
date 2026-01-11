@@ -14,9 +14,9 @@ const DEFAULT_SETTINGS: AppSettings = {
  * Get all settings for a user
  * @param userId - Required user ID to get settings for (prevents cross-user data leakage)
  */
-export function getSettings(userId: string): AppSettings {
+export async function getSettings(userId: string): Promise<AppSettings> {
   const db = getDb();
-  const rows = db.select().from(schema.settings).where(eq(schema.settings.userId, userId)).all();
+  const rows = await db.select().from(schema.settings).where(eq(schema.settings.userId, userId));
 
   const settings = { ...DEFAULT_SETTINGS };
 
@@ -40,51 +40,65 @@ export function getSettings(userId: string): AppSettings {
  * @param key - Setting key to retrieve
  * @param userId - Required user ID (prevents cross-user data leakage)
  */
-export function getSetting(key: string, userId: string): string | null {
+export async function getSetting(key: string, userId: string): Promise<string | null> {
   const db = getDb();
-  const result = db
+  const rows = await db
     .select()
     .from(schema.settings)
-    .where(and(eq(schema.settings.key, key), eq(schema.settings.userId, userId)))
-    .get();
+    .where(and(eq(schema.settings.key, key), eq(schema.settings.userId, userId)));
 
-  return result?.value ?? null;
+  return rows.length > 0 ? rows[0].value : null;
 }
 
 /**
  * Set a single setting for a user
  */
-export function setSetting(key: string, value: string, userId: string): void {
+export async function setSetting(key: string, value: string, userId: string): Promise<void> {
   const db = getDb();
-  const existing = getSetting(key, userId);
+  const existing = await getSetting(key, userId);
 
   if (existing !== null) {
-    db.update(schema.settings)
+    await db.update(schema.settings)
       .set({
         value,
         updatedAt: new Date().toISOString(),
       })
-      .where(and(eq(schema.settings.key, key), eq(schema.settings.userId, userId)))
-      .run();
+      .where(and(eq(schema.settings.key, key), eq(schema.settings.userId, userId)));
   } else {
-    db.insert(schema.settings)
+    await db.insert(schema.settings)
       .values({
         userId,
         key,
         value,
         updatedAt: new Date().toISOString(),
-      })
-      .run();
+      });
   }
 }
 
 /**
  * Update multiple settings for a user
  */
-export function updateSettings(updates: Partial<AppSettings>, userId: string): void {
+export async function updateSettings(updates: Partial<AppSettings>, userId: string): Promise<void> {
   for (const [key, value] of Object.entries(updates)) {
     if (value !== undefined) {
-      setSetting(key, value, userId);
+      await setSetting(key, value, userId);
     }
   }
+}
+
+/**
+ * Get all unique user IDs that have a region configured
+ * Used by cron jobs to fetch prices for all configured users
+ */
+export async function getUserIdsWithRegion(): Promise<string[]> {
+  const db = getDb();
+  const rows = await db
+    .select({ userId: schema.settings.userId, value: schema.settings.value })
+    .from(schema.settings)
+    .where(eq(schema.settings.key, 'region'));
+
+  // Filter to only users with non-empty region
+  return rows
+    .filter(row => row.value && row.value.trim() !== '')
+    .map(row => row.userId);
 }

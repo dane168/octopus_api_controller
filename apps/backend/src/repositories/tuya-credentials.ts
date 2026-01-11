@@ -24,14 +24,13 @@ function decryptSecret(encrypted: string): string {
 /**
  * Get Tuya credentials for a user
  */
-export function getTuyaCredentials(userId: string): TuyaCredentials | null {
+export async function getTuyaCredentials(userId: string): Promise<TuyaCredentials | null> {
   try {
     const db = getDb();
-    const result = db
+    const result = await db
       .select()
       .from(schema.tuyaCredentials)
-      .where(eq(schema.tuyaCredentials.userId, userId))
-      .all();
+      .where(eq(schema.tuyaCredentials.userId, userId));
 
     if (result.length === 0) {
       return null;
@@ -58,17 +57,16 @@ export function getTuyaCredentials(userId: string): TuyaCredentials | null {
 /**
  * Create or update Tuya credentials for a user
  */
-export function upsertTuyaCredentials(
+export async function upsertTuyaCredentials(
   userId: string,
   input: TuyaCredentialsInput
-): TuyaCredentials {
+): Promise<TuyaCredentials> {
   try {
     const db = getDb();
-    const existing = db
+    const existing = await db
       .select()
       .from(schema.tuyaCredentials)
-      .where(eq(schema.tuyaCredentials.userId, userId))
-      .all();
+      .where(eq(schema.tuyaCredentials.userId, userId));
 
     const encryptedSecret = encryptSecret(input.accessSecret);
     const endpoint = input.endpoint || 'https://openapi.tuyaeu.com';
@@ -76,15 +74,14 @@ export function upsertTuyaCredentials(
 
     if (existing.length > 0) {
       // Update existing credentials
-      db.update(schema.tuyaCredentials)
+      await db.update(schema.tuyaCredentials)
         .set({
           accessId: input.accessId,
           accessSecret: encryptedSecret,
           endpoint,
           updatedAt: now,
         })
-        .where(eq(schema.tuyaCredentials.userId, userId))
-        .run();
+        .where(eq(schema.tuyaCredentials.userId, userId));
 
       logger.info({ userId }, 'Updated Tuya credentials');
 
@@ -100,7 +97,7 @@ export function upsertTuyaCredentials(
     } else {
       // Insert new credentials
       const id = randomUUID();
-      db.insert(schema.tuyaCredentials)
+      await db.insert(schema.tuyaCredentials)
         .values({
           id,
           userId,
@@ -109,8 +106,7 @@ export function upsertTuyaCredentials(
           endpoint,
           createdAt: now,
           updatedAt: now,
-        })
-        .run();
+        });
 
       logger.info({ userId }, 'Created Tuya credentials');
 
@@ -133,12 +129,11 @@ export function upsertTuyaCredentials(
 /**
  * Delete Tuya credentials for a user
  */
-export function deleteTuyaCredentials(userId: string): void {
+export async function deleteTuyaCredentials(userId: string): Promise<void> {
   try {
     const db = getDb();
-    db.delete(schema.tuyaCredentials)
-      .where(eq(schema.tuyaCredentials.userId, userId))
-      .run();
+    await db.delete(schema.tuyaCredentials)
+      .where(eq(schema.tuyaCredentials.userId, userId));
     logger.info({ userId }, 'Deleted Tuya credentials');
   } catch (error) {
     logger.error({ error, userId }, 'Error deleting Tuya credentials');
@@ -149,14 +144,13 @@ export function deleteTuyaCredentials(userId: string): void {
 /**
  * Check if user has Tuya credentials configured
  */
-export function hasTuyaCredentials(userId: string): boolean {
+export async function hasTuyaCredentials(userId: string): Promise<boolean> {
   try {
     const db = getDb();
-    const result = db
+    const result = await db
       .select({ id: schema.tuyaCredentials.id })
       .from(schema.tuyaCredentials)
-      .where(eq(schema.tuyaCredentials.userId, userId))
-      .all();
+      .where(eq(schema.tuyaCredentials.userId, userId));
 
     return result.length > 0;
   } catch (error) {

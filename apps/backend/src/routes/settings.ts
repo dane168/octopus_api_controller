@@ -21,13 +21,13 @@ const updateSettingsSchema = z.object({
  * GET /api/settings
  * Get all settings for the current user
  */
-settingsRoutes.get('/', (req: Request, res: Response) => {
+settingsRoutes.get('/', async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const settings = settingsRepo.getSettings(userId);
+  const settings = await settingsRepo.getSettings(userId);
 
   // Mask API key if present (show correct number of stars)
   if (settings.octopusApiKey && settings.octopusApiKey.length > 4) {
@@ -57,7 +57,7 @@ settingsRoutes.get('/regions', (_req, res) => {
  * PUT /api/settings
  * Update settings for the current user
  */
-settingsRoutes.put('/', (req, res, next) => {
+settingsRoutes.put('/', async (req, res, next) => {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -73,7 +73,7 @@ settingsRoutes.put('/', (req, res, next) => {
 
     // If API key is not provided in update, keep existing
     if (!('octopusApiKey' in updates) || updates.octopusApiKey === undefined) {
-      const current = settingsRepo.getSetting('octopusApiKey', userId);
+      const current = await settingsRepo.getSetting('octopusApiKey', userId);
       if (!current) {
         throw new AppError(400, 'Octopus API Key is required.');
       }
@@ -85,8 +85,8 @@ settingsRoutes.put('/', (req, res, next) => {
     }
 
     // Always store the full key in DB (do not mask)
-    settingsRepo.updateSettings(updates, userId);
-    const settings = settingsRepo.getSettings(userId);
+    await settingsRepo.updateSettings(updates, userId);
+    const settings = await settingsRepo.getSettings(userId);
 
     // Mask API key in response only
     if (settings.octopusApiKey) {

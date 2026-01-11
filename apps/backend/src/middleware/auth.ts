@@ -47,7 +47,7 @@ export function verifyToken(token: string): JwtPayload | null {
 /**
  * Authentication middleware - requires valid JWT
  */
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -61,7 +61,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 
-  const user = findById(payload.userId);
+  const user = await findById(payload.userId);
   if (!user) {
     return res.status(401).json({ error: 'User not found' });
   }
@@ -74,7 +74,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 /**
  * Optional auth middleware - attaches user if token is valid, but doesn't require it
  */
-export function optionalAuth(req: Request, res: Response, next: NextFunction) {
+export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -82,7 +82,7 @@ export function optionalAuth(req: Request, res: Response, next: NextFunction) {
     const payload = verifyToken(token);
 
     if (payload) {
-      const user = findById(payload.userId);
+      const user = await findById(payload.userId);
       if (user) {
         req.user = user;
         req.userId = user.id;

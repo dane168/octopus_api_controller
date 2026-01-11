@@ -9,7 +9,8 @@
       "Bash(node --version:*)",
       "Bash(cat:*)",
       "Bash(pnpm list:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(pnpm --filter backend build:*)"
     ]
   }
 }

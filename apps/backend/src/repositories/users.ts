@@ -22,16 +22,16 @@ export interface GoogleUserInfo {
 /**
  * Find user by Google ID
  */
-export function findByGoogleId(googleId: string): User | null {
+export async function findByGoogleId(googleId: string): Promise<User | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(schema.users)
-    .where(eq(schema.users.googleId, googleId))
-    .get();
+    .where(eq(schema.users.googleId, googleId));
 
-  if (!row) return null;
+  if (rows.length === 0) return null;
 
+  const row = rows[0];
   return {
     id: row.id,
     googleId: row.googleId,
@@ -46,16 +46,16 @@ export function findByGoogleId(googleId: string): User | null {
 /**
  * Find user by ID
  */
-export function findById(id: string): User | null {
+export async function findById(id: string): Promise<User | null> {
   const db = getDb();
-  const row = db
+  const rows = await db
     .select()
     .from(schema.users)
-    .where(eq(schema.users.id, id))
-    .get();
+    .where(eq(schema.users.id, id));
 
-  if (!row) return null;
+  if (rows.length === 0) return null;
 
+  const row = rows[0];
   return {
     id: row.id,
     googleId: row.googleId,
@@ -70,29 +70,29 @@ export function findById(id: string): User | null {
 /**
  * Create or update user from Google OAuth
  */
-export function upsertFromGoogle(userInfo: GoogleUserInfo): User {
+export async function upsertFromGoogle(userInfo: GoogleUserInfo): Promise<User> {
   const db = getDb();
-  const existing = findByGoogleId(userInfo.googleId);
+  const existing = await findByGoogleId(userInfo.googleId);
   const now = new Date().toISOString();
 
   if (existing) {
     // Update existing user
-    db.update(schema.users)
+    await db.update(schema.users)
       .set({
         email: userInfo.email,
         name: userInfo.name,
         picture: userInfo.picture || null,
         lastLoginAt: now,
       })
-      .where(eq(schema.users.googleId, userInfo.googleId))
-      .run();
+      .where(eq(schema.users.googleId, userInfo.googleId));
 
-    return findByGoogleId(userInfo.googleId)!;
+    const updated = await findByGoogleId(userInfo.googleId);
+    return updated!;
   }
 
   // Create new user
   const id = uuidv4();
-  db.insert(schema.users)
+  await db.insert(schema.users)
     .values({
       id,
       googleId: userInfo.googleId,
@@ -101,34 +101,31 @@ export function upsertFromGoogle(userInfo: GoogleUserInfo): User {
       picture: userInfo.picture || null,
       createdAt: now,
       lastLoginAt: now,
-    })
-    .run();
+    });
 
-  return findById(id)!;
+  const created = await findById(id);
+  return created!;
 }
 
 /**
  * Migrate legacy data to a user
  * Updates all devices, schedules, and settings that have 'legacy' as user_id
  */
-export function migrateLegacyDataToUser(userId: string): void {
+export async function migrateLegacyDataToUser(userId: string): Promise<void> {
   const db = getDb();
 
   // Migrate devices
-  db.update(schema.devices)
+  await db.update(schema.devices)
     .set({ userId })
-    .where(eq(schema.devices.userId, 'legacy'))
-    .run();
+    .where(eq(schema.devices.userId, 'legacy'));
 
   // Migrate schedules
-  db.update(schema.schedules)
+  await db.update(schema.schedules)
     .set({ userId })
-    .where(eq(schema.schedules.userId, 'legacy'))
-    .run();
+    .where(eq(schema.schedules.userId, 'legacy'));
 
   // Migrate settings
-  db.update(schema.settings)
+  await db.update(schema.settings)
     .set({ userId })
-    .where(eq(schema.settings.userId, 'legacy'))
-    .run();
+    .where(eq(schema.settings.userId, 'legacy'));
 }

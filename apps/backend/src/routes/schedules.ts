@@ -70,9 +70,9 @@ const updateScheduleSchema = z.object({
  * GET /api/schedules
  * Get all schedules with device info for the current user
  */
-scheduleRoutes.get('/', (req: Request, res: Response) => {
+scheduleRoutes.get('/', async (req: Request, res: Response) => {
   try {
-    const schedules = scheduleRepo.getAllSchedulesWithDevices(req.userId);
+    const schedules = await scheduleRepo.getAllSchedulesWithDevices(req.userId);
     res.json({ schedules });
   } catch (error) {
     logger.error({ error }, 'Failed to get schedules');
@@ -85,13 +85,13 @@ scheduleRoutes.get('/', (req: Request, res: Response) => {
  * Get all schedule execution logs (across all schedules for the user)
  * Note: This route must come before /:id routes to avoid "logs" being treated as an ID
  */
-scheduleRoutes.get('/logs/all', (req: Request, res: Response) => {
+scheduleRoutes.get('/logs/all', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 100;
-    const logs = scheduleRepo.getAllScheduleLogs(limit);
+    const logs = await scheduleRepo.getAllScheduleLogs(limit);
 
     // Enrich logs with schedule and device names (only show user's schedules)
-    const schedules = scheduleRepo.getAllSchedulesWithDevices(req.userId);
+    const schedules = await scheduleRepo.getAllSchedulesWithDevices(req.userId);
     const scheduleMap = new Map(schedules.map(s => [s.id, s]));
 
     // Filter logs to only those belonging to user's schedules
@@ -117,9 +117,9 @@ scheduleRoutes.get('/logs/all', (req: Request, res: Response) => {
  * GET /api/schedules/:id
  * Get a single schedule
  */
-scheduleRoutes.get('/:id', (req: Request, res: Response) => {
+scheduleRoutes.get('/:id', async (req: Request, res: Response) => {
   try {
-    const schedule = scheduleRepo.getScheduleById(req.params.id, req.userId);
+    const schedule = await scheduleRepo.getScheduleById(req.params.id, req.userId);
 
     if (!schedule) {
       return res.status(404).json({ error: 'Schedule not found' });
@@ -136,7 +136,7 @@ scheduleRoutes.get('/:id', (req: Request, res: Response) => {
  * POST /api/schedules
  * Create a new schedule
  */
-scheduleRoutes.post('/', (req: Request, res: Response) => {
+scheduleRoutes.post('/', async (req: Request, res: Response) => {
   try {
     const validation = createScheduleSchema.safeParse(req.body);
 
@@ -150,7 +150,7 @@ scheduleRoutes.post('/', (req: Request, res: Response) => {
     logger.info({ input: validation.data }, 'Creating schedule');
 
     const userId = req.userId || 'legacy';
-    const schedule = scheduleRepo.createSchedule(validation.data, userId);
+    const schedule = await scheduleRepo.createSchedule(validation.data, userId);
 
     res.status(201).json({ schedule });
   } catch (error) {
@@ -164,7 +164,7 @@ scheduleRoutes.post('/', (req: Request, res: Response) => {
  * PUT /api/schedules/:id
  * Update a schedule
  */
-scheduleRoutes.put('/:id', (req: Request, res: Response) => {
+scheduleRoutes.put('/:id', async (req: Request, res: Response) => {
   try {
     const validation = updateScheduleSchema.safeParse(req.body);
 
@@ -175,7 +175,7 @@ scheduleRoutes.put('/:id', (req: Request, res: Response) => {
       });
     }
 
-    const schedule = scheduleRepo.updateSchedule(req.params.id, validation.data, req.userId);
+    const schedule = await scheduleRepo.updateSchedule(req.params.id, validation.data, req.userId);
 
     if (!schedule) {
       return res.status(404).json({ error: 'Schedule not found' });
@@ -193,9 +193,9 @@ scheduleRoutes.put('/:id', (req: Request, res: Response) => {
  * DELETE /api/schedules/:id
  * Delete a schedule
  */
-scheduleRoutes.delete('/:id', (req: Request, res: Response) => {
+scheduleRoutes.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const deleted = scheduleRepo.deleteSchedule(req.params.id, req.userId);
+    const deleted = await scheduleRepo.deleteSchedule(req.params.id, req.userId);
 
     if (!deleted) {
       return res.status(404).json({ error: 'Schedule not found' });
@@ -213,9 +213,9 @@ scheduleRoutes.delete('/:id', (req: Request, res: Response) => {
  * POST /api/schedules/:id/toggle
  * Toggle a schedule's enabled state
  */
-scheduleRoutes.post('/:id/toggle', (req: Request, res: Response) => {
+scheduleRoutes.post('/:id/toggle', async (req: Request, res: Response) => {
   try {
-    const schedule = scheduleRepo.toggleSchedule(req.params.id, req.userId);
+    const schedule = await scheduleRepo.toggleSchedule(req.params.id, req.userId);
 
     if (!schedule) {
       return res.status(404).json({ error: 'Schedule not found' });
@@ -233,16 +233,16 @@ scheduleRoutes.post('/:id/toggle', (req: Request, res: Response) => {
  * GET /api/schedules/:id/logs
  * Get schedule execution logs
  */
-scheduleRoutes.get('/:id/logs', (req: Request, res: Response) => {
+scheduleRoutes.get('/:id/logs', async (req: Request, res: Response) => {
   try {
-    const schedule = scheduleRepo.getScheduleById(req.params.id, req.userId);
+    const schedule = await scheduleRepo.getScheduleById(req.params.id, req.userId);
 
     if (!schedule) {
       return res.status(404).json({ error: 'Schedule not found' });
     }
 
     const limit = parseInt(req.query.limit as string) || 50;
-    const logs = scheduleRepo.getScheduleLogs(req.params.id, limit);
+    const logs = await scheduleRepo.getScheduleLogs(req.params.id, limit);
 
     res.json({ logs });
   } catch (error) {

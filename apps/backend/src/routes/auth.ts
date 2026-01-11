@@ -46,7 +46,7 @@ authRoutes.post('/google', async (req: Request, res: Response) => {
     }
 
     // Create or update user
-    const user = upsertFromGoogle({
+    const user = await upsertFromGoogle({
       googleId: payload.sub,
       email: payload.email,
       name: payload.name || payload.email.split('@')[0],
@@ -54,7 +54,7 @@ authRoutes.post('/google', async (req: Request, res: Response) => {
     });
 
     // Migrate any legacy data to this user (first user to log in gets it)
-    migrateLegacyDataToUser(user.id);
+    await migrateLegacyDataToUser(user.id);
 
     // Generate our JWT
     const token = generateToken(user);

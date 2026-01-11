@@ -33,9 +33,9 @@ const controlDeviceSchema = z.object({
 });
 
 // GET /api/devices - List all devices for the current user
-deviceRoutes.get('/', (req: Request, res: Response) => {
+deviceRoutes.get('/', async (req: Request, res: Response) => {
   try {
-    const devices = devicesRepo.getAllDevices(req.userId);
+    const devices = await devicesRepo.getAllDevices(req.userId);
     res.json({ devices });
   } catch (error) {
     logger.error({ error }, 'Failed to get devices');
@@ -81,7 +81,7 @@ deviceRoutes.post('/import-from-cloud', async (req: Request, res: Response) => {
     const skipped: string[] = [];
 
     // Get existing devices to check for duplicates
-    const existingDevices = devicesRepo.getAllDevices(userId);
+    const existingDevices = await devicesRepo.getAllDevices(userId);
 
     for (const tuyaDevice of tuyaDevices) {
       // Check if device already exists by Tuya device ID
@@ -93,7 +93,7 @@ deviceRoutes.post('/import-from-cloud', async (req: Request, res: Response) => {
 
       const deviceType = categoryToType[tuyaDevice.category] || 'switch';
 
-      devicesRepo.createDevice({
+      await devicesRepo.createDevice({
         name: tuyaDevice.name,
         type: deviceType as 'switch' | 'plug' | 'light' | 'heater' | 'thermostat' | 'hot_water',
         config: {
@@ -120,9 +120,9 @@ deviceRoutes.post('/import-from-cloud', async (req: Request, res: Response) => {
 });
 
 // GET /api/devices/:id - Get a single device
-deviceRoutes.get('/:id', (req: Request, res: Response) => {
+deviceRoutes.get('/:id', async (req: Request, res: Response) => {
   try {
-    const device = devicesRepo.getDeviceById(req.params.id, req.userId);
+    const device = await devicesRepo.getDeviceById(req.params.id, req.userId);
 
     if (!device) {
       return res.status(404).json({ error: 'Device not found' });
@@ -152,7 +152,7 @@ deviceRoutes.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    const device = devicesRepo.createDevice(validation.data, userId);
+    const device = await devicesRepo.createDevice(validation.data, userId);
     logger.info({ deviceId: device.id, name: device.name }, 'Device created');
 
     res.status(201).json({ device });
@@ -164,7 +164,7 @@ deviceRoutes.post('/', async (req: Request, res: Response) => {
 });
 
 // PUT /api/devices/:id - Update a device
-deviceRoutes.put('/:id', (req: Request, res: Response) => {
+deviceRoutes.put('/:id', async (req: Request, res: Response) => {
   try {
     const validation = updateDeviceSchema.safeParse(req.body);
 
@@ -175,7 +175,7 @@ deviceRoutes.put('/:id', (req: Request, res: Response) => {
       });
     }
 
-    const device = devicesRepo.updateDevice(req.params.id, validation.data, req.userId);
+    const device = await devicesRepo.updateDevice(req.params.id, validation.data, req.userId);
 
     if (!device) {
       return res.status(404).json({ error: 'Device not found' });
@@ -190,9 +190,9 @@ deviceRoutes.put('/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /api/devices/:id - Delete a device
-deviceRoutes.delete('/:id', (req: Request, res: Response) => {
+deviceRoutes.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const deleted = devicesRepo.deleteDevice(req.params.id, req.userId);
+    const deleted = await devicesRepo.deleteDevice(req.params.id, req.userId);
 
     if (!deleted) {
       return res.status(404).json({ error: 'Device not found' });
@@ -218,7 +218,7 @@ deviceRoutes.post('/:id/control', async (req: Request, res: Response) => {
       });
     }
 
-    const device = devicesRepo.getDeviceById(req.params.id, req.userId);
+    const device = await devicesRepo.getDeviceById(req.params.id, req.userId);
 
     if (!device) {
       return res.status(404).json({ error: 'Device not found' });
@@ -228,7 +228,7 @@ deviceRoutes.post('/:id/control', async (req: Request, res: Response) => {
     const state = await tuyaService.controlDevice(device, action);
 
     // Update device status in database
-    devicesRepo.updateDeviceStatus(device.id, 'online');
+    await devicesRepo.updateDeviceStatus(device.id, 'online');
 
     logger.info({ deviceId: device.id, name: device.name, action, state }, 'Device controlled');
     res.json({ device, state });
@@ -237,7 +237,7 @@ deviceRoutes.post('/:id/control', async (req: Request, res: Response) => {
     logger.error({ error, deviceId: req.params.id }, 'Failed to control device');
 
     // Update device status to offline if control failed
-    devicesRepo.updateDeviceStatus(req.params.id, 'offline');
+    await devicesRepo.updateDeviceStatus(req.params.id, 'offline');
 
     res.status(500).json({ error: `Failed to control device: ${errorMessage}` });
   }
@@ -246,7 +246,7 @@ deviceRoutes.post('/:id/control', async (req: Request, res: Response) => {
 // GET /api/devices/:id/state - Get device current state
 deviceRoutes.get('/:id/state', async (req: Request, res: Response) => {
   try {
-    const device = devicesRepo.getDeviceById(req.params.id, req.userId);
+    const device = await devicesRepo.getDeviceById(req.params.id, req.userId);
 
     if (!device) {
       return res.status(404).json({ error: 'Device not found' });
@@ -255,7 +255,7 @@ deviceRoutes.get('/:id/state', async (req: Request, res: Response) => {
     const state = await tuyaService.getDeviceState(device);
 
     // Update device status in database
-    devicesRepo.updateDeviceStatus(device.id, 'online');
+    await devicesRepo.updateDeviceStatus(device.id, 'online');
 
     res.json({ device, state });
   } catch (error) {
@@ -263,7 +263,7 @@ deviceRoutes.get('/:id/state', async (req: Request, res: Response) => {
     logger.error({ error, deviceId: req.params.id }, 'Failed to get device state');
 
     // Update device status to offline if failed
-    devicesRepo.updateDeviceStatus(req.params.id, 'offline');
+    await devicesRepo.updateDeviceStatus(req.params.id, 'offline');
 
     res.status(500).json({ error: `Failed to get device state: ${errorMessage}` });
   }

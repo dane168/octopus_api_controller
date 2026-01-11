@@ -30,7 +30,7 @@ const cheapestQuerySchema = z.object({
  * GET /api/prices
  * Get prices within a time range
  */
-priceRoutes.get('/', (req, res, next) => {
+priceRoutes.get('/', async (req, res, next) => {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -38,9 +38,10 @@ priceRoutes.get('/', (req, res, next) => {
     }
 
     const query = priceQuerySchema.parse(req.query);
-    const region = query.region || getSettings(userId).region;
+    const settings = await getSettings(userId);
+    const region = query.region || settings.region;
 
-    const prices = priceRepo.getPrices({
+    const prices = await priceRepo.getPrices({
       from: query.from,
       to: query.to,
       region,
@@ -56,15 +57,16 @@ priceRoutes.get('/', (req, res, next) => {
  * GET /api/prices/current
  * Get the current price
  */
-priceRoutes.get('/current', (req, res, next) => {
+priceRoutes.get('/current', async (req, res, next) => {
   try {
     const userId = req.userId;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const region = (req.query.region as string) || getSettings(userId).region;
-    const price = priceRepo.getCurrentPrice(region);
+    const settings = await getSettings(userId);
+    const region = (req.query.region as string) || settings.region;
+    const price = await priceRepo.getCurrentPrice(region);
 
     if (!price) {
       throw new AppError(404, 'No current price found. Try refreshing prices.');
@@ -80,15 +82,16 @@ priceRoutes.get('/current', (req, res, next) => {
  * GET /api/prices/today
  * Get today's prices
  */
-priceRoutes.get('/today', (req, res, next) => {
+priceRoutes.get('/today', async (req, res, next) => {
   try {
     const userId = req.userId;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const region = (req.query.region as string) || getSettings(userId).region;
-    const prices = priceRepo.getTodayPrices(region);
+    const settings = await getSettings(userId);
+    const region = (req.query.region as string) || settings.region;
+    const prices = await priceRepo.getTodayPrices(region);
 
     res.json({ prices });
   } catch (error) {
@@ -100,7 +103,7 @@ priceRoutes.get('/today', (req, res, next) => {
  * GET /api/prices/cheapest
  * Get the cheapest hours within a time window
  */
-priceRoutes.get('/cheapest', (req, res, next) => {
+priceRoutes.get('/cheapest', async (req, res, next) => {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -108,13 +111,14 @@ priceRoutes.get('/cheapest', (req, res, next) => {
     }
 
     const query = cheapestQuerySchema.parse(req.query);
-    const region = (req.query.region as string) || getSettings(userId).region;
+    const settings = await getSettings(userId);
+    const region = (req.query.region as string) || settings.region;
 
     if (query.hours <= 0 || query.hours > 24) {
       throw new AppError(400, 'Hours must be between 0 and 24');
     }
 
-    const prices = priceRepo.getCheapestHours({
+    const prices = await priceRepo.getCheapestHours({
       hours: query.hours,
       from: query.from,
       to: query.to,
@@ -139,7 +143,8 @@ priceRoutes.post('/refresh', async (req: Request, res: Response, next: NextFunct
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const region = getSettings(userId).region;
+    const settings = await getSettings(userId);
+    const region = settings.region;
 
     if (!region) {
       throw new AppError(400, 'Region not configured. Please set your region in Settings.');

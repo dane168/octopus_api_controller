@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import type {
@@ -51,82 +51,83 @@ function mapRowToSchedule(row: typeof schema.schedules.$inferSelect): Schedule {
 /**
  * Get all schedules for a user
  */
-export function getAllSchedules(userId?: string): Schedule[] {
+export async function getAllSchedules(userId?: string): Promise<Schedule[]> {
   const db = getDb();
+  let rows;
   if (userId) {
-    const rows = db.select().from(schema.schedules).where(eq(schema.schedules.userId, userId)).all();
-    return rows.map(mapRowToSchedule);
+    rows = await db.select().from(schema.schedules).where(eq(schema.schedules.userId, userId));
+  } else {
+    rows = await db.select().from(schema.schedules);
   }
-  const rows = db.select().from(schema.schedules).all();
   return rows.map(mapRowToSchedule);
 }
 
 /**
  * Get all schedules with device info for a user
  */
-export function getAllSchedulesWithDevices(userId?: string): ScheduleWithDevices[] {
-  const schedules = getAllSchedules(userId);
+export async function getAllSchedulesWithDevices(userId?: string): Promise<ScheduleWithDevices[]> {
+  const schedules = await getAllSchedules(userId);
 
-  return schedules.map((schedule) => {
-    const devices = schedule.deviceIds
-      .map((deviceId) => {
-        const device = getDeviceById(deviceId);
-        return device ? { id: device.id, name: device.name } : null;
-      })
-      .filter((d): d is { id: string; name: string } => d !== null);
-
-    return {
+  const result: ScheduleWithDevices[] = [];
+  for (const schedule of schedules) {
+    const devices: { id: string; name: string }[] = [];
+    for (const deviceId of schedule.deviceIds) {
+      const device = await getDeviceById(deviceId);
+      if (device) {
+        devices.push({ id: device.id, name: device.name });
+      }
+    }
+    result.push({
       ...schedule,
       devices,
-    };
-  });
+    });
+  }
+
+  return result;
 }
 
 /**
  * Get a schedule by ID (optionally scoped to user)
  */
-export function getScheduleById(id: string, userId?: string): Schedule | null {
+export async function getScheduleById(id: string, userId?: string): Promise<Schedule | null> {
   const db = getDb();
-  let row;
+  let rows;
   if (userId) {
-    row = db
+    rows = await db
       .select()
       .from(schema.schedules)
-      .where(and(eq(schema.schedules.id, id), eq(schema.schedules.userId, userId)))
-      .get();
+      .where(and(eq(schema.schedules.id, id), eq(schema.schedules.userId, userId)));
   } else {
-    row = db
+    rows = await db
       .select()
       .from(schema.schedules)
-      .where(eq(schema.schedules.id, id))
-      .get();
+      .where(eq(schema.schedules.id, id));
   }
 
-  return row ? mapRowToSchedule(row) : null;
+  return rows.length > 0 ? mapRowToSchedule(rows[0]) : null;
 }
 
 /**
  * Get enabled schedules (for the cron job - runs across all users)
  */
-export function getEnabledSchedules(): Schedule[] {
+export async function getEnabledSchedules(): Promise<Schedule[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(schema.schedules)
-    .where(eq(schema.schedules.enabled, true))
-    .all();
+    .where(eq(schema.schedules.enabled, true));
   return rows.map(mapRowToSchedule);
 }
 
 /**
  * Create a new schedule for a user
  */
-export function createSchedule(input: CreateScheduleInput, userId: string): Schedule {
+export async function createSchedule(input: CreateScheduleInput, userId: string): Promise<Schedule> {
   const db = getDb();
   const id = uuidv4();
   const now = new Date().toISOString();
 
-  db.insert(schema.schedules)
+  await db.insert(schema.schedules)
     .values({
       id,
       userId,
@@ -136,18 +137,18 @@ export function createSchedule(input: CreateScheduleInput, userId: string): Sche
       config: JSON.stringify(input.config),
       createdAt: now,
       updatedAt: now,
-    })
-    .run();
+    });
 
-  return getScheduleById(id)!;
+  const schedule = await getScheduleById(id);
+  return schedule!;
 }
 
 /**
  * Update a schedule (optionally scoped to user)
  */
-export function updateSchedule(id: string, input: UpdateScheduleInput, userId?: string): Schedule | null {
+export async function updateSchedule(id: string, input: UpdateScheduleInput, userId?: string): Promise<Schedule | null> {
   const db = getDb();
-  const existing = getScheduleById(id, userId);
+  const existing = await getScheduleById(id, userId);
 
   if (!existing) {
     return null;
@@ -174,15 +175,13 @@ export function updateSchedule(id: string, input: UpdateScheduleInput, userId?: 
   }
 
   if (userId) {
-    db.update(schema.schedules)
+    await db.update(schema.schedules)
       .set(updates)
-      .where(and(eq(schema.schedules.id, id), eq(schema.schedules.userId, userId)))
-      .run();
+      .where(and(eq(schema.schedules.id, id), eq(schema.schedules.userId, userId)));
   } else {
-    db.update(schema.schedules)
+    await db.update(schema.schedules)
       .set(updates)
-      .where(eq(schema.schedules.id, id))
-      .run();
+      .where(eq(schema.schedules.id, id));
   }
 
   return getScheduleById(id, userId);
@@ -191,8 +190,8 @@ export function updateSchedule(id: string, input: UpdateScheduleInput, userId?: 
 /**
  * Toggle a schedule's enabled state (optionally scoped to user)
  */
-export function toggleSchedule(id: string, userId?: string): Schedule | null {
-  const existing = getScheduleById(id, userId);
+export async function toggleSchedule(id: string, userId?: string): Promise<Schedule | null> {
+  const existing = await getScheduleById(id, userId);
   if (!existing) {
     return null;
   }
@@ -203,32 +202,36 @@ export function toggleSchedule(id: string, userId?: string): Schedule | null {
 /**
  * Delete a schedule (optionally scoped to user)
  */
-export function deleteSchedule(id: string, userId?: string): boolean {
+export async function deleteSchedule(id: string, userId?: string): Promise<boolean> {
   const db = getDb();
-  let result;
-  if (userId) {
-    result = db
-      .delete(schema.schedules)
-      .where(and(eq(schema.schedules.id, id), eq(schema.schedules.userId, userId)))
-      .run();
-  } else {
-    result = db
-      .delete(schema.schedules)
-      .where(eq(schema.schedules.id, id))
-      .run();
+
+  // Check if schedule exists first
+  const existing = await getScheduleById(id, userId);
+  if (!existing) {
+    return false;
   }
 
-  return result.changes > 0;
+  if (userId) {
+    await db
+      .delete(schema.schedules)
+      .where(and(eq(schema.schedules.id, id), eq(schema.schedules.userId, userId)));
+  } else {
+    await db
+      .delete(schema.schedules)
+      .where(eq(schema.schedules.id, id));
+  }
+
+  return true;
 }
 
 /**
  * Create a schedule log entry
  */
-export function createScheduleLog(log: Omit<ScheduleLog, 'id' | 'executedAt'>): void {
+export async function createScheduleLog(log: Omit<ScheduleLog, 'id' | 'executedAt'>): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
 
-  db.insert(schema.scheduleLogs)
+  await db.insert(schema.scheduleLogs)
     .values({
       scheduleId: log.scheduleId,
       deviceId: log.deviceId,
@@ -237,22 +240,20 @@ export function createScheduleLog(log: Omit<ScheduleLog, 'id' | 'executedAt'>): 
       success: log.success,
       errorMessage: log.errorMessage || null,
       executedAt: now,
-    })
-    .run();
+    });
 }
 
 /**
  * Get schedule logs
  */
-export function getScheduleLogs(scheduleId: string, limit = 50): ScheduleLog[] {
+export async function getScheduleLogs(scheduleId: string, limit = 50): Promise<ScheduleLog[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(schema.scheduleLogs)
     .where(eq(schema.scheduleLogs.scheduleId, scheduleId))
-    .orderBy(schema.scheduleLogs.executedAt)
-    .limit(limit)
-    .all();
+    .orderBy(desc(schema.scheduleLogs.executedAt))
+    .limit(limit);
 
   return rows.map((row) => ({
     id: row.id,
@@ -269,17 +270,15 @@ export function getScheduleLogs(scheduleId: string, limit = 50): ScheduleLog[] {
 /**
  * Get all schedule logs (across all schedules)
  */
-export function getAllScheduleLogs(limit = 100): ScheduleLog[] {
+export async function getAllScheduleLogs(limit = 100): Promise<ScheduleLog[]> {
   const db = getDb();
-  const rows = db
+  const rows = await db
     .select()
     .from(schema.scheduleLogs)
-    .orderBy(schema.scheduleLogs.executedAt)
-    .limit(limit)
-    .all();
+    .orderBy(desc(schema.scheduleLogs.executedAt))
+    .limit(limit);
 
-  // Return in reverse order (most recent first)
-  return rows.reverse().map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     scheduleId: row.scheduleId,
     deviceId: row.deviceId,

@@ -41,49 +41,47 @@ function mapRowToDevice(row: typeof schema.devices.$inferSelect): Device {
 /**
  * Get all devices for a user
  */
-export function getAllDevices(userId?: string): Device[] {
+export async function getAllDevices(userId?: string): Promise<Device[]> {
   const db = getDb();
   if (userId) {
-    const rows = db.select().from(schema.devices).where(eq(schema.devices.userId, userId)).all();
+    const rows = await db.select().from(schema.devices).where(eq(schema.devices.userId, userId));
     return rows.map(mapRowToDevice);
   }
   // Fallback for unauthenticated access (when auth is disabled)
-  const rows = db.select().from(schema.devices).all();
+  const rows = await db.select().from(schema.devices);
   return rows.map(mapRowToDevice);
 }
 
 /**
  * Get a device by ID (optionally scoped to user)
  */
-export function getDeviceById(id: string, userId?: string): Device | null {
+export async function getDeviceById(id: string, userId?: string): Promise<Device | null> {
   const db = getDb();
-  let row;
+  let rows;
   if (userId) {
-    row = db
+    rows = await db
       .select()
       .from(schema.devices)
-      .where(and(eq(schema.devices.id, id), eq(schema.devices.userId, userId)))
-      .get();
+      .where(and(eq(schema.devices.id, id), eq(schema.devices.userId, userId)));
   } else {
-    row = db
+    rows = await db
       .select()
       .from(schema.devices)
-      .where(eq(schema.devices.id, id))
-      .get();
+      .where(eq(schema.devices.id, id));
   }
 
-  return row ? mapRowToDevice(row) : null;
+  return rows.length > 0 ? mapRowToDevice(rows[0]) : null;
 }
 
 /**
  * Create a new device for a user
  */
-export function createDevice(input: CreateDeviceInput, userId: string): Device {
+export async function createDevice(input: CreateDeviceInput, userId: string): Promise<Device> {
   const db = getDb();
   const id = uuidv4();
   const now = new Date().toISOString();
 
-  db.insert(schema.devices)
+  await db.insert(schema.devices)
     .values({
       id,
       userId,
@@ -94,18 +92,18 @@ export function createDevice(input: CreateDeviceInput, userId: string): Device {
       status: 'unknown',
       createdAt: now,
       updatedAt: now,
-    })
-    .run();
+    });
 
-  return getDeviceById(id)!;
+  const device = await getDeviceById(id);
+  return device!;
 }
 
 /**
  * Update a device (optionally scoped to user)
  */
-export function updateDevice(id: string, input: UpdateDeviceInput, userId?: string): Device | null {
+export async function updateDevice(id: string, input: UpdateDeviceInput, userId?: string): Promise<Device | null> {
   const db = getDb();
-  const existing = getDeviceById(id, userId);
+  const existing = await getDeviceById(id, userId);
 
   if (!existing) {
     return null;
@@ -130,15 +128,13 @@ export function updateDevice(id: string, input: UpdateDeviceInput, userId?: stri
   }
 
   if (userId) {
-    db.update(schema.devices)
+    await db.update(schema.devices)
       .set(updates)
-      .where(and(eq(schema.devices.id, id), eq(schema.devices.userId, userId)))
-      .run();
+      .where(and(eq(schema.devices.id, id), eq(schema.devices.userId, userId)));
   } else {
-    db.update(schema.devices)
+    await db.update(schema.devices)
       .set(updates)
-      .where(eq(schema.devices.id, id))
-      .run();
+      .where(eq(schema.devices.id, id));
   }
 
   return getDeviceById(id, userId);
@@ -147,37 +143,40 @@ export function updateDevice(id: string, input: UpdateDeviceInput, userId?: stri
 /**
  * Delete a device (optionally scoped to user)
  */
-export function deleteDevice(id: string, userId?: string): boolean {
+export async function deleteDevice(id: string, userId?: string): Promise<boolean> {
   const db = getDb();
-  let result;
-  if (userId) {
-    result = db
-      .delete(schema.devices)
-      .where(and(eq(schema.devices.id, id), eq(schema.devices.userId, userId)))
-      .run();
-  } else {
-    result = db
-      .delete(schema.devices)
-      .where(eq(schema.devices.id, id))
-      .run();
+
+  // Check if device exists first
+  const existing = await getDeviceById(id, userId);
+  if (!existing) {
+    return false;
   }
 
-  return result.changes > 0;
+  if (userId) {
+    await db
+      .delete(schema.devices)
+      .where(and(eq(schema.devices.id, id), eq(schema.devices.userId, userId)));
+  } else {
+    await db
+      .delete(schema.devices)
+      .where(eq(schema.devices.id, id));
+  }
+
+  return true;
 }
 
 /**
  * Update device status
  */
-export function updateDeviceStatus(id: string, status: DeviceStatus): void {
+export async function updateDeviceStatus(id: string, status: DeviceStatus): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
 
-  db.update(schema.devices)
+  await db.update(schema.devices)
     .set({
       status,
       lastSeen: status === 'online' ? now : undefined,
       updatedAt: now,
     })
-    .where(eq(schema.devices.id, id))
-    .run();
+    .where(eq(schema.devices.id, id));
 }

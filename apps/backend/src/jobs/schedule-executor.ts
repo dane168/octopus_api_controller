@@ -79,11 +79,11 @@ async function executeDeviceAction(
   reason: string
 ): Promise<boolean> {
   try {
-    const device = devicesRepo.getDeviceById(deviceId);
+    const device = await devicesRepo.getDeviceById(deviceId);
 
     if (!device) {
       logger.warn({ scheduleId, deviceId }, 'Device not found for schedule execution');
-      scheduleRepo.createScheduleLog({
+      await scheduleRepo.createScheduleLog({
         scheduleId,
         deviceId,
         action,
@@ -97,10 +97,10 @@ async function executeDeviceAction(
     await tuyaService.controlDevice(device, action);
 
     // Update device status
-    devicesRepo.updateDeviceStatus(deviceId, 'online');
+    await devicesRepo.updateDeviceStatus(deviceId, 'online');
 
     // Log success
-    scheduleRepo.createScheduleLog({
+    await scheduleRepo.createScheduleLog({
       scheduleId,
       deviceId,
       action,
@@ -114,10 +114,10 @@ async function executeDeviceAction(
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     // Update device status
-    devicesRepo.updateDeviceStatus(deviceId, 'offline');
+    await devicesRepo.updateDeviceStatus(deviceId, 'offline');
 
     // Log failure
-    scheduleRepo.createScheduleLog({
+    await scheduleRepo.createScheduleLog({
       scheduleId,
       deviceId,
       action,
@@ -162,7 +162,7 @@ async function processTimeSlotsSchedule(schedule: Schedule): Promise<void> {
 
       // For 'once' schedules, disable after execution
       if (config.repeat === 'once') {
-        scheduleRepo.updateSchedule(schedule.id, { enabled: false });
+        await scheduleRepo.updateSchedule(schedule.id, { enabled: false });
         logger.info({ scheduleId: schedule.id }, 'One-time schedule disabled after execution');
       }
     } else if (isSlotEnd(slot, now) && config.action !== 'toggle') {
@@ -184,7 +184,7 @@ async function processTimeSlotsSchedule(schedule: Schedule): Promise<void> {
  */
 async function evaluateSchedules(): Promise<void> {
   try {
-    const enabledSchedules = scheduleRepo.getEnabledSchedules();
+    const enabledSchedules = await scheduleRepo.getEnabledSchedules();
 
     for (const schedule of enabledSchedules) {
       try {

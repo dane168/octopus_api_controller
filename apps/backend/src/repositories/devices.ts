@@ -16,7 +16,7 @@ function parseConfig(configJson: string): DeviceConfig {
   try {
     return JSON.parse(configJson);
   } catch {
-    return {};
+    return { deviceId: '' };
   }
 }
 
@@ -26,6 +26,7 @@ function parseConfig(configJson: string): DeviceConfig {
 function mapRowToDevice(row: typeof schema.devices.$inferSelect): Device {
   return {
     id: row.id,
+    userId: row.userId,
     name: row.name,
     type: row.type as Device['type'],
     protocol: row.protocol as Device['protocol'],
@@ -88,7 +89,7 @@ export function createDevice(input: CreateDeviceInput, userId: string): Device {
       userId,
       name: input.name,
       type: input.type,
-      protocol: input.protocol,
+      protocol: 'tuya-cloud', // Always use tuya-cloud
       config: JSON.stringify(input.config),
       status: 'unknown',
       createdAt: now,

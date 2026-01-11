@@ -3,6 +3,10 @@ import { z } from 'zod';
 const envSchema = z.object({
   PORT: z.string().default('3001').transform(Number),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  // Turso database (for production/Vercel)
+  TURSO_DATABASE_URL: z.string().optional(),
+  TURSO_AUTH_TOKEN: z.string().optional(),
+  // Local SQLite fallback (for development)
   DATABASE_PATH: z.string().default('./data/octopus-controller.db'),
   OCTOPUS_REGION: z.string().optional(),
   OCTOPUS_API_KEY: z.string().optional(),

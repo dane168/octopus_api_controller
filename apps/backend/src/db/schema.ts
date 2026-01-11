@@ -31,10 +31,10 @@ export const devices = sqliteTable('devices', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   name: text('name').notNull(),
-  type: text('type').notNull(), // 'switch', 'plug', 'heater', 'thermostat', 'hot_water'
-  protocol: text('protocol').notNull(), // 'tuya-local', 'mock'
-  config: text('config').notNull(), // JSON string
-  status: text('status').default('offline'), // 'online', 'offline', 'unknown'
+  type: text('type').notNull(), // 'switch', 'plug', 'light', 'heater', 'thermostat', 'hot_water'
+  protocol: text('protocol').notNull().default('tuya-cloud'), // 'tuya-cloud', 'mock'
+  config: text('config').notNull(), // JSON string with deviceId
+  status: text('status').default('unknown'), // 'online', 'offline', 'unknown'
   lastSeen: text('last_seen'),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP'),
@@ -72,5 +72,17 @@ export const settings = sqliteTable('settings', {
   userId: text('user_id').notNull(),
   key: text('key').notNull(),
   value: text('value').notNull(),
+  updatedAt: text('updated_at').default('CURRENT_TIMESTAMP'),
+});
+
+// Tuya Cloud API credentials - per user
+export const tuyaCredentials = sqliteTable('tuya_credentials', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().unique(), // One set of credentials per user
+  accessId: text('access_id').notNull(), // Tuya Cloud API Access ID
+  accessSecret: text('access_secret').notNull(), // Tuya Cloud API Access Secret (encrypted)
+  endpoint: text('endpoint').notNull().default('https://openapi.tuyaeu.com'), // Regional endpoint
+  uid: text('uid'), // Optional: Tuya user ID for linked account
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
   updatedAt: text('updated_at').default('CURRENT_TIMESTAMP'),
 });

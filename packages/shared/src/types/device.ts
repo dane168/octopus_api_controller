@@ -4,9 +4,14 @@
 export type DeviceType = 'switch' | 'plug' | 'light' | 'heater' | 'thermostat' | 'hot_water';
 
 /**
- * Supported device protocols/adapters
+ * Supported device protocols/adapters (Tuya Cloud only)
  */
-export type DeviceProtocol = 'tuya-local' | 'mock';
+export type DeviceProtocol = 'tuya-cloud' | 'mock';
+
+/**
+ * Tuya Cloud API regional endpoints
+ */
+export type TuyaRegion = 'eu' | 'us' | 'cn' | 'in' | 'sg';
 
 /**
  * Device connection status
@@ -14,14 +19,14 @@ export type DeviceProtocol = 'tuya-local' | 'mock';
 export type DeviceStatus = 'online' | 'offline' | 'unknown';
 
 /**
- * Device configuration (protocol-specific)
+ * Device configuration for Tuya Cloud
  */
 export interface DeviceConfig {
-  // Tuya-specific configuration
-  deviceId?: string;
-  localKey?: string;
-  ip?: string;
-  version?: '3.1' | '3.3' | '3.4';
+  deviceId: string; // Tuya device ID (required)
+  localKey?: string; // Tuya local key (for future local control)
+  category?: string; // Tuya device category (e.g., 'cz' for plug)
+  productId?: string; // Tuya product ID
+  icon?: string; // Device icon URL
 }
 
 /**
@@ -29,6 +34,7 @@ export interface DeviceConfig {
  */
 export interface Device {
   id: string;
+  userId: string; // User who owns the device
   name: string;
   type: DeviceType;
   protocol: DeviceProtocol;
@@ -60,7 +66,6 @@ export interface DeviceWithState extends Device {
 export interface CreateDeviceInput {
   name: string;
   type: DeviceType;
-  protocol: DeviceProtocol;
   config: DeviceConfig;
 }
 

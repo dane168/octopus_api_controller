@@ -22,7 +22,12 @@ const updateSettingsSchema = z.object({
  * Get all settings for the current user
  */
 settingsRoutes.get('/', (req: Request, res: Response) => {
-  const settings = settingsRepo.getSettings(req.userId);
+  const userId = req.userId;
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const settings = settingsRepo.getSettings(userId);
 
   // Mask API key if present (show correct number of stars)
   if (settings.octopusApiKey && settings.octopusApiKey.length > 4) {
@@ -54,8 +59,12 @@ settingsRoutes.get('/regions', (_req, res) => {
  */
 settingsRoutes.put('/', (req, res, next) => {
   try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const updates = updateSettingsSchema.partial().parse(req.body);
-    const userId = req.userId || 'legacy';
 
     // Validate region if provided
     if (updates.region && !isValidRegion(updates.region)) {

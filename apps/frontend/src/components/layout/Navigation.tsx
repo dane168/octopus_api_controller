@@ -15,8 +15,8 @@ export function Navigation() {
   const { user, logout, authEnabled } = useAuth();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:static md:border-t-0 md:border-r md:h-screen md:w-64 z-50">
-      <div className="flex md:flex-col md:p-4 md:h-full">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:sticky md:top-0 md:border-t-0 md:border-r md:h-screen md:w-64 md:flex-shrink-0 z-50">
+      <div className="flex md:flex-col md:p-4 md:h-full md:overflow-y-auto">
         {/* Logo - Desktop only */}
         <div className="hidden md:block mb-8">
           <h1 className="text-xl font-bold text-gray-900">Energy Controller</h1>

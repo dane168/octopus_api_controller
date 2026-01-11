@@ -3,7 +3,7 @@ import { Calendar, Plus, Trash2, Power, Clock, Loader2, X, ToggleLeft, ToggleRig
 import { useSchedules, useCreateSchedule, useDeleteSchedule, useToggleSchedule, useScheduleLogs } from '../hooks/useSchedules';
 import { useDevices } from '../hooks/useDevices';
 import { useNext24HoursPrices } from '../hooks/usePrices';
-import type { Device, Price, ScheduleWithDevices, TimeSlotsConfig, DeviceAction, TimeSlot, ScheduleLog } from '@octopus-controller/shared';
+import type { Device, Price, ScheduleWithDevices, TimeSlotsConfig, DeviceAction, TimeSlot } from '@octopus-controller/shared';
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-GB', {

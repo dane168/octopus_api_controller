@@ -81,7 +81,8 @@ authRoutes.post('/google', async (req: Request, res: Response) => {
  * Get current user info
  */
 authRoutes.get('/me', requireAuth, (req: Request, res: Response) => {
-  const user = req.user!;
+  // User is guaranteed to exist after requireAuth middleware
+  const user = req.user as { id: string; email: string; name: string; picture?: string };
 
   res.json({
     user: {

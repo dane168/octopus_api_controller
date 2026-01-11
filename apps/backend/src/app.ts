@@ -6,6 +6,7 @@ import { priceRoutes } from './routes/prices.js';
 import { deviceRoutes } from './routes/devices.js';
 import { scheduleRoutes } from './routes/schedules.js';
 import { settingsRoutes } from './routes/settings.js';
+import tuyaRoutes from './routes/tuya.js';
 import { config } from './config/index.js';
 
 export const app = express();
@@ -28,6 +29,7 @@ app.use('/api/prices', priceRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/tuya', tuyaRoutes);
 
 // Error handling
 app.use(errorHandler);

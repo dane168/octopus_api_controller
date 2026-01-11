@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import * as devicesRepo from '../repositories/devices.js';
 import * as tuyaService from '../services/tuya/index.js';
+import * as tuyaCredsRepo from '../repositories/tuya-credentials.js';
 import { logger } from '../utils/logger.js';
 import { optionalAuth } from '../middleware/auth.js';
 
@@ -14,14 +15,9 @@ deviceRoutes.use(optionalAuth);
 const createDeviceSchema = z.object({
   name: z.string().min(1).max(100),
   type: z.enum(['switch', 'plug', 'light', 'heater', 'thermostat', 'hot_water'] as const),
-  protocol: z.enum(['tuya-local', 'mock'] as const),
   config: z.object({
     deviceId: z.string().min(1),
-    localKey: z.string().min(1),
-    ip: z.string().optional(),
-    version: z.enum(['3.1', '3.3', '3.4'] as const).optional(),
   }),
-  skipConnectionTest: z.boolean().optional(),
 });
 
 const updateDeviceSchema = z.object({
@@ -29,21 +25,11 @@ const updateDeviceSchema = z.object({
   type: z.enum(['switch', 'plug', 'light', 'heater', 'thermostat', 'hot_water'] as const).optional(),
   config: z.object({
     deviceId: z.string().optional(),
-    localKey: z.string().optional(),
-    ip: z.string().optional(),
-    version: z.enum(['3.1', '3.3', '3.4'] as const).optional(),
   }).optional(),
 });
 
 const controlDeviceSchema = z.object({
   action: z.enum(['on', 'off', 'toggle'] as const),
-});
-
-const testConnectionSchema = z.object({
-  deviceId: z.string().min(1),
-  localKey: z.string().min(1),
-  ip: z.string().optional(),
-  version: z.enum(['3.1', '3.3', '3.4'] as const).optional(),
 });
 
 // GET /api/devices - List all devices for the current user
@@ -57,53 +43,27 @@ deviceRoutes.get('/', (req: Request, res: Response) => {
   }
 });
 
-// POST /api/devices/test-connection - Test device connection without saving
+// POST /api/devices/import-from-cloud - Import devices from Tuya Cloud
 // NOTE: Must be before /:id routes to avoid route conflict
-deviceRoutes.post('/test-connection', async (req: Request, res: Response) => {
+deviceRoutes.post('/import-from-cloud', async (req: Request, res: Response) => {
   try {
-    const validation = testConnectionSchema.safeParse(req.body);
-
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Invalid config data',
-        details: validation.error.errors,
-      });
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const success = await tuyaService.testDeviceConnection(validation.data);
-
-    res.json({ success });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error({ err: error, message: errorMessage }, 'Connection test failed');
-    res.status(500).json({ error: `Connection test failed: ${errorMessage}`, success: false });
-  }
-});
-
-// POST /api/devices/import - Bulk import devices from Tuya JSON export
-// NOTE: Must be before /:id routes to avoid route conflict
-deviceRoutes.post('/import', async (req: Request, res: Response) => {
-  try {
-    const importSchema = z.object({
-      devices: z.array(z.object({
-        id: z.string(),
-        custom_name: z.string().optional(),
-        name: z.string(),
-        local_key: z.string(),
-        ip: z.string().optional(),
-        category: z.string(),
-        is_online: z.boolean().optional(),
-      })),
-    });
-
-    const validation = importSchema.safeParse(req.body);
-
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Invalid import data',
-        details: validation.error.errors,
-      });
+    // Get user's Tuya credentials
+    const credentials = await tuyaCredsRepo.getTuyaCredentials(userId);
+    if (!credentials) {
+      return res.status(400).json({ error: 'Tuya credentials not configured. Please add your Tuya API credentials in Settings first.' });
     }
+
+    // Fetch devices from Tuya Cloud
+    const tuyaDevices = await tuyaService.getTuyaDevices(
+      credentials.accessId,
+      credentials.accessSecret,
+      credentials.endpoint
+    );
 
     // Map Tuya categories to our device types
     const categoryToType: Record<string, string> = {
@@ -113,48 +73,48 @@ deviceRoutes.post('/import', async (req: Request, res: Response) => {
       'kg': 'switch',    // Switch
       'tgq': 'light',    // Dimmer/light
       'dd': 'light',     // LED strip
+      'pc': 'plug',      // Power strip
+      'wk': 'thermostat', // Thermostat
     };
 
     const imported: string[] = [];
     const skipped: string[] = [];
 
-    const userId = req.userId || 'legacy';
+    // Get existing devices to check for duplicates
+    const existingDevices = devicesRepo.getAllDevices(userId);
 
-    for (const tuyaDevice of validation.data.devices) {
-      // Check if device already exists by tuya device ID for this user
-      const allDevices = devicesRepo.getAllDevices(req.userId);
-      const existing = allDevices.find(d => d.config.deviceId === tuyaDevice.id);
+    for (const tuyaDevice of tuyaDevices) {
+      // Check if device already exists by Tuya device ID
+      const existing = existingDevices.find(d => d.config.deviceId === tuyaDevice.id);
       if (existing) {
-        skipped.push(tuyaDevice.custom_name || tuyaDevice.name);
+        skipped.push(tuyaDevice.name);
         continue;
       }
 
       const deviceType = categoryToType[tuyaDevice.category] || 'switch';
 
       devicesRepo.createDevice({
-        name: tuyaDevice.custom_name || tuyaDevice.name,
+        name: tuyaDevice.name,
         type: deviceType as 'switch' | 'plug' | 'light' | 'heater' | 'thermostat' | 'hot_water',
-        protocol: 'tuya-local',
         config: {
           deviceId: tuyaDevice.id,
-          localKey: tuyaDevice.local_key,
-          // Don't use the IP from Tuya - it's the public IP, not local
         },
       }, userId);
 
-      imported.push(tuyaDevice.custom_name || tuyaDevice.name);
+      imported.push(tuyaDevice.name);
     }
 
-    logger.info({ imported: imported.length, skipped: skipped.length }, 'Devices imported');
+    logger.info({ imported: imported.length, skipped: skipped.length }, 'Devices imported from Tuya Cloud');
 
     res.json({
       message: `Imported ${imported.length} devices, skipped ${skipped.length} existing`,
       imported,
       skipped,
+      total: tuyaDevices.length,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error({ err: error, message: errorMessage }, 'Failed to import devices');
+    logger.error({ err: error, message: errorMessage }, 'Failed to import devices from Tuya Cloud');
     res.status(500).json({ error: `Failed to import devices: ${errorMessage}` });
   }
 });
@@ -178,6 +138,11 @@ deviceRoutes.get('/:id', (req: Request, res: Response) => {
 // POST /api/devices - Create a new device
 deviceRoutes.post('/', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const validation = createDeviceSchema.safeParse(req.body);
 
     if (!validation.success) {
@@ -187,20 +152,7 @@ deviceRoutes.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    const { skipConnectionTest, ...input } = validation.data;
-
-    // Test connection before saving (unless skipped)
-    if (input.protocol === 'tuya-local' && !skipConnectionTest) {
-      const connectionOk = await tuyaService.testDeviceConnection(input.config);
-      if (!connectionOk) {
-        return res.status(400).json({
-          error: 'Could not connect to device. Please check device ID, local key, IP address, and that the device is online. You can skip this test by checking "Skip connection test".',
-        });
-      }
-    }
-
-    const userId = req.userId || 'legacy';
-    const device = devicesRepo.createDevice(input, userId);
+    const device = devicesRepo.createDevice(validation.data, userId);
     logger.info({ deviceId: device.id, name: device.name }, 'Device created');
 
     res.status(201).json({ device });

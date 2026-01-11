@@ -12,6 +12,7 @@ export interface FetchPricesOptions {
   region: string;
   periodFrom?: string;
   periodTo?: string;
+  userId: string;
 }
 
 /**
@@ -25,15 +26,15 @@ function getTariffCode(region: string): string {
  * Fetch Agile prices from Octopus Energy API
  */
 export async function fetchAgileprices(options: FetchPricesOptions): Promise<Price[]> {
-  const { region, periodFrom, periodTo } = options;
+  const { region, periodFrom, periodTo, userId } = options;
   const tariffCode = getTariffCode(region);
   const url = `${OCTOPUS_API_BASE}/products/${AGILE_PRODUCT_CODE}/electricity-tariffs/${tariffCode}/standard-unit-rates/`;
   const params: Record<string, string> = {};
   if (periodFrom) params.period_from = periodFrom;
   if (periodTo) params.period_to = periodTo;
 
-  // Get API key from DB settings
-  const settings = getSettings();
+  // Get API key from DB settings for this user
+  const settings = getSettings(userId);
   const apiKey = settings.octopusApiKey;
   if (!apiKey) {
     logger.error({ region }, 'Octopus API Key is required but missing in settings');
@@ -124,7 +125,7 @@ export async function fetchAgileprices(options: FetchPricesOptions): Promise<Pri
 /**
  * Fetch today's prices (from midnight to midnight)
  */
-export async function fetchTodayPrices(region: string): Promise<Price[]> {
+export async function fetchTodayPrices(region: string, userId: string): Promise<Price[]> {
   logger.info({ region }, 'Fetching today\'s prices');
   const now = new Date();
   const startOfDay = new Date(now);
@@ -138,6 +139,7 @@ export async function fetchTodayPrices(region: string): Promise<Price[]> {
       region,
       periodFrom: startOfDay.toISOString(),
       periodTo: endOfDay.toISOString(),
+      userId,
     });
     logger.info({ count: prices.length, region }, 'Fetched today\'s prices');
     return prices;
@@ -150,7 +152,7 @@ export async function fetchTodayPrices(region: string): Promise<Price[]> {
 /**
  * Fetch tomorrow's prices (released at ~16:00 daily)
  */
-export async function fetchTomorrowPrices(region: string): Promise<Price[]> {
+export async function fetchTomorrowPrices(region: string, userId: string): Promise<Price[]> {
   logger.info({ region }, 'Fetching tomorrow\'s prices');
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -164,6 +166,7 @@ export async function fetchTomorrowPrices(region: string): Promise<Price[]> {
       region,
       periodFrom: tomorrow.toISOString(),
       periodTo: endOfTomorrow.toISOString(),
+      userId,
     });
     logger.info({ count: prices.length, region }, 'Fetched tomorrow\'s prices');
     return prices;
@@ -176,7 +179,7 @@ export async function fetchTomorrowPrices(region: string): Promise<Price[]> {
 /**
  * Fetch prices for the Agile pricing window (23:00 to 23:00 next day)
  */
-export async function fetchAgileDayPrices(region: string): Promise<Price[]> {
+export async function fetchAgileDayPrices(region: string, userId: string): Promise<Price[]> {
   logger.info({ region }, 'Fetching Agile day prices');
   const now = new Date();
 
@@ -211,6 +214,7 @@ export async function fetchAgileDayPrices(region: string): Promise<Price[]> {
       region,
       periodFrom: periodFrom.toISOString(),
       periodTo: periodTo.toISOString(),
+      userId,
     });
     logger.info({ count: prices.length, region }, 'Fetched Agile day prices');
     return prices;

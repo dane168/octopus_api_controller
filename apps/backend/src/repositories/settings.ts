@@ -12,15 +12,11 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 /**
  * Get all settings for a user
+ * @param userId - Required user ID to get settings for (prevents cross-user data leakage)
  */
-export function getSettings(userId?: string): AppSettings {
+export function getSettings(userId: string): AppSettings {
   const db = getDb();
-  let rows;
-  if (userId) {
-    rows = db.select().from(schema.settings).where(eq(schema.settings.userId, userId)).all();
-  } else {
-    rows = db.select().from(schema.settings).all();
-  }
+  const rows = db.select().from(schema.settings).where(eq(schema.settings.userId, userId)).all();
 
   const settings = { ...DEFAULT_SETTINGS };
 
@@ -41,23 +37,16 @@ export function getSettings(userId?: string): AppSettings {
 
 /**
  * Get a single setting for a user
+ * @param key - Setting key to retrieve
+ * @param userId - Required user ID (prevents cross-user data leakage)
  */
-export function getSetting(key: string, userId?: string): string | null {
+export function getSetting(key: string, userId: string): string | null {
   const db = getDb();
-  let result;
-  if (userId) {
-    result = db
-      .select()
-      .from(schema.settings)
-      .where(and(eq(schema.settings.key, key), eq(schema.settings.userId, userId)))
-      .get();
-  } else {
-    result = db
-      .select()
-      .from(schema.settings)
-      .where(eq(schema.settings.key, key))
-      .get();
-  }
+  const result = db
+    .select()
+    .from(schema.settings)
+    .where(and(eq(schema.settings.key, key), eq(schema.settings.userId, userId)))
+    .get();
 
   return result?.value ?? null;
 }

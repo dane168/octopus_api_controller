@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { Plug, Plus, Power, Trash2, Settings, Wifi, WifiOff, Loader2, X, Upload, Edit2, RefreshCw, Lightbulb } from 'lucide-react';
-import { useDevices, useCreateDevice, useUpdateDevice, useDeleteDevice, useControlDevice, useTestConnection, useImportDevices, useCheckDeviceStatus } from '../hooks/useDevices';
+import { useState, useRef } from 'react';
+import { Plug, Plus, Power, Trash2, Wifi, WifiOff, Loader2, X, Upload, Edit2, RefreshCw, Lightbulb, Cloud } from 'lucide-react';
+import { useDevices, useCreateDevice, useUpdateDevice, useDeleteDevice, useControlDevice, useImportDevices, useCheckDeviceStatus } from '../hooks/useDevices';
+// Note: useTestConnection removed - not needed for cloud-only protocol
+import { useImportDevicesFromCloud } from '../hooks/useTuya';
 import type { Device, DeviceType, CreateDeviceInput, UpdateDeviceInput } from '@octopus-controller/shared';
 
 const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
@@ -89,7 +91,6 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
       {/* Show config summary */}
       <div className="text-xs text-gray-500 mb-3 font-mono bg-gray-50 p-2 rounded">
         <div className="truncate" title={device.config.deviceId}>ID: {device.config.deviceId?.slice(0, 16)}...</div>
-        <div>IP: {device.config.ip || <span className="text-amber-600">Not set</span>}</div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -133,48 +134,30 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
   );
 }
 
-function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting, isTestingConnection, onTestConnection }: {
+function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting }: {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (input: CreateDeviceInput) => void;
   isSubmitting: boolean;
-  isTestingConnection: boolean;
-  onTestConnection: (config: { deviceId: string; localKey: string; ip?: string }) => Promise<boolean>;
 }) {
   const [name, setName] = useState('');
   const [type, setType] = useState<DeviceType>('plug');
   const [deviceId, setDeviceId] = useState('');
-  const [localKey, setLocalKey] = useState('');
-  const [ip, setIp] = useState('');
-  const [testResult, setTestResult] = useState<'success' | 'failed' | null>(null);
 
   if (!isOpen) return null;
-
-  const handleTestConnection = async () => {
-    setTestResult(null);
-    const success = await onTestConnection({
-      deviceId,
-      localKey,
-      ip: ip || undefined,
-    });
-    setTestResult(success ? 'success' : 'failed');
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
       name,
       type,
-      protocol: 'tuya-local',
       config: {
         deviceId,
-        localKey,
-        ip: ip || undefined,
       },
     });
   };
 
-  const canSubmit = name && deviceId && localKey && !isSubmitting;
+  const canSubmit = name && deviceId && !isSubmitting;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -230,58 +213,9 @@ function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting, isTestingConn
               className="input w-full font-mono text-sm"
               required
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Local Key
-            </label>
-            <input
-              type="text"
-              value={localKey}
-              onChange={(e) => setLocalKey(e.target.value)}
-              placeholder="1234567890abcdef"
-              className="input w-full font-mono text-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              IP Address (optional)
-            </label>
-            <input
-              type="text"
-              value={ip}
-              onChange={(e) => setIp(e.target.value)}
-              placeholder="192.168.1.100"
-              className="input w-full font-mono text-sm"
-            />
             <p className="text-xs text-gray-500 mt-1">
-              Leave empty to auto-discover on network
+              Find this in your Tuya IoT Platform project.
             </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleTestConnection}
-              disabled={!deviceId || !localKey || isTestingConnection}
-              className="btn btn-secondary flex items-center gap-2"
-            >
-              {isTestingConnection ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Settings className="w-4 h-4" />
-              )}
-              Test Connection
-            </button>
-            {testResult === 'success' && (
-              <span className="text-green-600 text-sm">Connection successful!</span>
-            )}
-            {testResult === 'failed' && (
-              <span className="text-red-600 text-sm">Connection failed</span>
-            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
@@ -305,16 +239,7 @@ function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting, isTestingConn
 
         <div className="p-4 bg-gray-50 rounded-b-lg">
           <p className="text-xs text-gray-500">
-            Get your Device ID and Local Key from the{' '}
-            <a
-              href="https://iot.tuya.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              Tuya IoT Platform
-            </a>
-            . You'll need to link your devices first.
+            <strong>Tip:</strong> Use the "Import from Tuya Cloud" button to automatically import all your devices.
           </p>
         </div>
       </div>
@@ -329,39 +254,26 @@ function EditDeviceModal({ device, isOpen, onClose, onSubmit, isSubmitting }: {
   onSubmit: (id: string, input: UpdateDeviceInput) => void;
   isSubmitting: boolean;
 }) {
-  const [name, setName] = useState('');
-  const [type, setType] = useState<DeviceType>('plug');
-  const [deviceId, setDeviceId] = useState('');
-  const [localKey, setLocalKey] = useState('');
-  const [ip, setIp] = useState('');
-  const [version, setVersion] = useState<'3.1' | '3.3' | '3.4' | ''>('');
+  const [name, setName] = useState(device?.name || '');
+  const [type, setType] = useState<DeviceType>(device?.type || 'plug');
+  const [deviceId, setDeviceId] = useState(device?.config.deviceId || '');
 
-  // Populate form when device changes
-  useEffect(() => {
-    if (device) {
-      setName(device.name);
-      setType(device.type);
-      setDeviceId(device.config.deviceId || '');
-      setLocalKey(device.config.localKey || '');
-      setIp(device.config.ip || '');
-      setVersion(device.config.version || '');
-    }
-  }, [device]);
+  // Update form when device changes
+  if (device && name !== device.name && !isOpen) {
+    setName(device.name);
+    setType(device.type);
+    setDeviceId(device.config.deviceId || '');
+  }
 
   if (!isOpen || !device) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedIp = ip.trim();
     onSubmit(device.id, {
       name,
       type,
       config: {
         deviceId,
-        localKey,
-        // Always include IP in the update so it gets saved properly
-        ...(trimmedIp ? { ip: trimmedIp } : {}),
-        version: version || undefined,
       },
     });
   };
@@ -420,51 +332,6 @@ function EditDeviceModal({ device, isOpen, onClose, onSubmit, isSubmitting }: {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Local Key
-            </label>
-            <input
-              type="text"
-              value={localKey}
-              onChange={(e) => setLocalKey(e.target.value)}
-              className="input w-full font-mono text-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              IP Address (Local Network)
-            </label>
-            <input
-              type="text"
-              value={ip}
-              onChange={(e) => setIp(e.target.value)}
-              placeholder="192.168.1.100"
-              className="input w-full font-mono text-sm"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Find using: <code className="bg-gray-100 px-1 rounded">python -m tinytuya scan</code>
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Protocol Version
-            </label>
-            <select
-              value={version}
-              onChange={(e) => setVersion(e.target.value as '3.1' | '3.3' | '3.4' | '')}
-              className="input w-full"
-            >
-              <option value="">Auto-detect</option>
-              <option value="3.1">3.1</option>
-              <option value="3.3">3.3</option>
-              <option value="3.4">3.4</option>
-            </select>
-          </div>
-
           <div className="flex justify-end gap-2 pt-4 border-t">
             <button
               type="button"
@@ -475,7 +342,7 @@ function EditDeviceModal({ device, isOpen, onClose, onSubmit, isSubmitting }: {
             </button>
             <button
               type="submit"
-              disabled={!name || !deviceId || !localKey || isSubmitting}
+              disabled={!name || !deviceId || isSubmitting}
               className="btn btn-primary flex items-center gap-2"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -502,9 +369,9 @@ export function Devices() {
   const updateMutation = useUpdateDevice();
   const deleteMutation = useDeleteDevice();
   const controlMutation = useControlDevice();
-  const testMutation = useTestConnection();
   const importMutation = useImportDevices();
   const checkStatusMutation = useCheckDeviceStatus();
+  const importFromCloudMutation = useImportDevicesFromCloud();
 
   const handleControl = async (deviceId: string, action: 'on' | 'off' | 'toggle') => {
     setControllingDeviceId(deviceId);
@@ -546,13 +413,24 @@ export function Devices() {
     setIsModalOpen(false);
   };
 
-  const handleTestConnection = async (config: { deviceId: string; localKey: string; ip?: string }) => {
-    return testMutation.mutateAsync(config);
-  };
-
   const handleUpdateDevice = async (id: string, input: UpdateDeviceInput) => {
     await updateMutation.mutateAsync({ id, input });
     setEditingDevice(null);
+  };
+
+  const handleImportFromCloud = async () => {
+    try {
+      const result = await importFromCloudMutation.mutateAsync();
+      setImportResult({
+        message: `Imported ${result.imported.length} devices, skipped ${result.skipped.length} existing.`,
+        type: 'success'
+      });
+      setTimeout(() => setImportResult(null), 5000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to import from Tuya Cloud';
+      setImportResult({ message, type: 'error' });
+      setTimeout(() => setImportResult(null), 5000);
+    }
   };
 
   const handleImportClick = () => {
@@ -617,9 +495,23 @@ export function Devices() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={handleImportFromCloud}
+            disabled={importFromCloudMutation.isPending}
+            className="btn btn-secondary flex items-center gap-2"
+            title="Import devices from your Tuya Cloud account"
+          >
+            {importFromCloudMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Cloud className="w-4 h-4" />
+            )}
+            Import from Cloud
+          </button>
+          <button
             onClick={handleImportClick}
             disabled={importMutation.isPending}
             className="btn btn-secondary flex items-center gap-2"
+            title="Import devices from a JSON file"
           >
             {importMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -647,7 +539,7 @@ export function Devices() {
 
       {hasDevices ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {devices.map((device) => (
+          {devices.map((device: Device) => (
             <DeviceCard
               key={device.id}
               device={device}
@@ -666,22 +558,36 @@ export function Devices() {
           <Plug className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h2 className="text-lg font-medium text-gray-900 mb-2">No Devices Yet</h2>
           <p className="text-gray-500 max-w-md mx-auto mb-4">
-            Add your Tuya smart devices to control them locally based on electricity prices.
+            Add your Tuya smart devices to control them based on electricity prices.
           </p>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="btn btn-primary inline-flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Your First Device
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              onClick={handleImportFromCloud}
+              disabled={importFromCloudMutation.isPending}
+              className="btn btn-primary inline-flex items-center gap-2"
+            >
+              {importFromCloudMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Cloud className="w-4 h-4" />
+              )}
+              Import from Tuya Cloud
+            </button>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="btn btn-secondary inline-flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Manually
+            </button>
+          </div>
           <div className="mt-6 p-4 bg-gray-50 rounded-lg text-left">
             <h3 className="font-medium text-gray-900 mb-2">What you'll need:</h3>
             <ul className="text-sm text-gray-600 space-y-1">
-              <li>1. Create a Tuya IoT Platform developer account</li>
-              <li>2. Link your Tuya/Smart Life app devices to the platform</li>
-              <li>3. Get Device IDs and Local Keys from the platform</li>
-              <li>4. Ensure devices are on the same local network</li>
+              <li>1. Create a Tuya IoT Platform developer account at <a href="https://iot.tuya.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">iot.tuya.com</a></li>
+              <li>2. Create a Cloud project and link your Tuya/Smart Life app</li>
+              <li>3. Add your Tuya credentials in Settings</li>
+              <li>4. Click "Import from Tuya Cloud" to import all your devices</li>
             </ul>
           </div>
         </div>
@@ -692,8 +598,6 @@ export function Devices() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateDevice}
         isSubmitting={createMutation.isPending}
-        isTestingConnection={testMutation.isPending}
-        onTestConnection={handleTestConnection}
       />
 
       <EditDeviceModal

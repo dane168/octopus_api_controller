@@ -6,11 +6,11 @@ node_modules
 dist
 **/dist
 
-# Environment files
+# Environment files (keep .env.example)
 .env
-.env.*
+.env.local
 **/.env
-**/.env.*
+**/.env.local
 
 # Logs
 *.log
@@ -19,9 +19,6 @@ dist
 .git
 .gitignore
 
-# Frontend (not needed for backend docker build)
-apps/frontend
-
 # IDE
 .vscode
 .idea
@@ -29,3 +26,8 @@ apps/frontend
 # OS
 .DS_Store
 Thumbs.db
+
+# Terraform state (sensitive)
+terraform/.terraform
+terraform/*.tfstate*
+terraform/terraform.tfvars

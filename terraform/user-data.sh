@@ -28,11 +28,15 @@ curl -SL "https://github.com/docker/compose/releases/latest/download/docker-comp
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Install Docker Buildx (required for compose build)
-curl -SL "https://github.com/docker/buildx/releases/latest/download/buildx-v0.19.3.linux-arm64" -o /usr/local/lib/docker/cli-plugins/docker-buildx
+# Note: Don't fail if buildx install fails - compose can still work
+BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+echo "Installing buildx version: $BUILDX_VERSION"
+curl -SL -o /usr/local/lib/docker/cli-plugins/docker-buildx \
+  "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-arm64"
 chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 
-# Create buildx builder
-docker buildx create --use --name multiarch --driver docker-container
+# Verify buildx works
+docker buildx version || echo "Warning: buildx not working, continuing anyway"
 
 # Add ec2-user to docker group
 usermod -aG docker ec2-user

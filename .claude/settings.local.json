@@ -10,7 +10,12 @@
       "Bash(cat:*)",
       "Bash(pnpm list:*)",
       "Bash(findstr:*)",
-      "Bash(pnpm --filter backend build:*)"
+      "Bash(pnpm --filter backend build:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm run build:*)",
+      "Bash(timeout 5 pnpm run dev:*)",
+      "Bash(pnpm rebuild:*)",
+      "Bash(timeout 8 pnpm run dev:*)"
     ]
   }
 }

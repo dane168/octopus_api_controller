@@ -1,5 +1,6 @@
 import { priceFetchJob, priceRefreshJob } from './price-fetch.js';
 import { scheduleExecutorJob } from './schedule-executor.js';
+import { dbCleanupJob } from './db-cleanup.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -17,6 +18,10 @@ export function startJobs() {
   // Start schedule executor (every minute)
   scheduleExecutorJob.start();
   logger.info('Schedule executor started (runs every minute)');
+
+  // Start database cleanup job (3:00 AM daily)
+  dbCleanupJob.start();
+  logger.info('Database cleanup job scheduled (3:00 AM daily)');
 }
 
 /**
@@ -26,5 +31,6 @@ export function stopJobs() {
   priceFetchJob.stop();
   priceRefreshJob.stop();
   scheduleExecutorJob.stop();
+  dbCleanupJob.stop();
   logger.info('All jobs stopped');
 }

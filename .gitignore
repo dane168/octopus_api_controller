@@ -43,3 +43,7 @@ temp/
 
 .venv/
 .venv
+.venv_win/
+.venv_win
+
+.claude

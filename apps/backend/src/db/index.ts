@@ -1,11 +1,13 @@
-import { createClient, type Client } from '@libsql/client';
-import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
+import Database from 'better-sqlite3';
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema.js';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
+import fs from 'fs';
+import path from 'path';
 
-let client: Client;
-let db: LibSQLDatabase<typeof schema>;
+let sqlite: Database.Database;
+let db: BetterSQLite3Database<typeof schema>;
 
 export function getDb() {
   if (!db) {
@@ -15,34 +17,30 @@ export function getDb() {
 }
 
 export async function initDatabase() {
-  // Use Turso if URL is provided, otherwise use local file
-  const isTurso = !!config.TURSO_DATABASE_URL;
-
-  if (isTurso) {
-    logger.info('Connecting to Turso database...');
-    client = createClient({
-      url: config.TURSO_DATABASE_URL!,
-      authToken: config.TURSO_AUTH_TOKEN,
-    });
-  } else {
-    logger.info(`Using local SQLite database: ${config.DATABASE_PATH}`);
-    client = createClient({
-      url: `file:${config.DATABASE_PATH}`,
-    });
+  // Ensure data directory exists
+  const dbDir = path.dirname(config.DATABASE_PATH);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
   }
 
+  logger.info(`Using local SQLite database: ${config.DATABASE_PATH}`);
+  sqlite = new Database(config.DATABASE_PATH);
+
+  // Enable WAL mode for better concurrent access
+  sqlite.pragma('journal_mode = WAL');
+
   // Initialize Drizzle
-  db = drizzle(client, { schema });
+  db = drizzle(sqlite, { schema });
 
   // Run migrations (create tables if they don't exist)
-  await runMigrations();
+  runMigrations();
 
-  logger.info(isTurso ? 'Connected to Turso database' : `Database initialized at: ${config.DATABASE_PATH}`);
+  logger.info(`Database initialized at: ${config.DATABASE_PATH}`);
 }
 
-async function runMigrations() {
+function runMigrations() {
   // Create tables if they don't exist
-  await client.executeMultiple(`
+  sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       google_id TEXT NOT NULL UNIQUE,
@@ -133,21 +131,21 @@ async function runMigrations() {
   `);
 
   // Run data migrations
-  await runDataMigrations();
+  runDataMigrations();
 
   logger.info('Database migrations completed');
 }
 
-async function runDataMigrations() {
+function runDataMigrations() {
   // Migration: Check and add user_id to devices if missing
   try {
-    const devicesInfo = await client.execute("PRAGMA table_info(devices)");
-    const devicesHasUserId = devicesInfo.rows.some((row: any) => row.name === 'user_id');
+    const devicesInfo = sqlite.prepare("PRAGMA table_info(devices)").all() as any[];
+    const devicesHasUserId = devicesInfo.some((row) => row.name === 'user_id');
 
-    if (!devicesHasUserId && devicesInfo.rows.length > 0) {
+    if (!devicesHasUserId && devicesInfo.length > 0) {
       logger.info('Migrating devices table: adding user_id column');
-      await client.execute("ALTER TABLE devices ADD COLUMN user_id TEXT DEFAULT 'legacy'");
-      await client.execute("UPDATE devices SET user_id = 'legacy' WHERE user_id IS NULL");
+      sqlite.exec("ALTER TABLE devices ADD COLUMN user_id TEXT DEFAULT 'legacy'");
+      sqlite.exec("UPDATE devices SET user_id = 'legacy' WHERE user_id IS NULL");
       logger.info('Migration completed: devices.user_id added');
     }
   } catch (error) {
@@ -156,13 +154,13 @@ async function runDataMigrations() {
 
   // Migration: Check and add user_id to schedules if missing
   try {
-    const schedulesInfo = await client.execute("PRAGMA table_info(schedules)");
-    const schedulesHasUserId = schedulesInfo.rows.some((row: any) => row.name === 'user_id');
+    const schedulesInfo = sqlite.prepare("PRAGMA table_info(schedules)").all() as any[];
+    const schedulesHasUserId = schedulesInfo.some((row) => row.name === 'user_id');
 
-    if (!schedulesHasUserId && schedulesInfo.rows.length > 0) {
+    if (!schedulesHasUserId && schedulesInfo.length > 0) {
       logger.info('Migrating schedules table: adding user_id column');
-      await client.execute("ALTER TABLE schedules ADD COLUMN user_id TEXT DEFAULT 'legacy'");
-      await client.execute("UPDATE schedules SET user_id = 'legacy' WHERE user_id IS NULL");
+      sqlite.exec("ALTER TABLE schedules ADD COLUMN user_id TEXT DEFAULT 'legacy'");
+      sqlite.exec("UPDATE schedules SET user_id = 'legacy' WHERE user_id IS NULL");
       logger.info('Migration completed: schedules.user_id added');
     }
   } catch (error) {
@@ -171,23 +169,21 @@ async function runDataMigrations() {
 
   // Migration: Rename device_id to device_ids if needed
   try {
-    const schedulesInfo = await client.execute("PRAGMA table_info(schedules)");
-    const hasOldColumn = schedulesInfo.rows.some((row: any) => row.name === 'device_id');
-    const hasNewColumn = schedulesInfo.rows.some((row: any) => row.name === 'device_ids');
+    const schedulesInfo = sqlite.prepare("PRAGMA table_info(schedules)").all() as any[];
+    const hasOldColumn = schedulesInfo.some((row) => row.name === 'device_id');
+    const hasNewColumn = schedulesInfo.some((row) => row.name === 'device_ids');
 
     if (hasOldColumn && !hasNewColumn) {
       logger.info('Migrating schedules table: device_id -> device_ids');
-      await client.execute("ALTER TABLE schedules RENAME COLUMN device_id TO device_ids");
+      sqlite.exec("ALTER TABLE schedules RENAME COLUMN device_id TO device_ids");
 
       // Convert existing single device_id values to JSON arrays
-      const schedules = await client.execute("SELECT id, device_ids FROM schedules");
-      for (const schedule of schedules.rows) {
+      const schedules = sqlite.prepare("SELECT id, device_ids FROM schedules").all() as any[];
+      const updateStmt = sqlite.prepare("UPDATE schedules SET device_ids = ? WHERE id = ?");
+      for (const schedule of schedules) {
         const deviceIds = schedule.device_ids as string;
         if (deviceIds && !deviceIds.startsWith('[')) {
-          await client.execute({
-            sql: "UPDATE schedules SET device_ids = ? WHERE id = ?",
-            args: [JSON.stringify([deviceIds]), schedule.id as string]
-          });
+          updateStmt.run(JSON.stringify([deviceIds]), schedule.id);
         }
       }
       logger.info('Migration completed: device_id -> device_ids');
@@ -198,8 +194,8 @@ async function runDataMigrations() {
 }
 
 export async function closeDatabase() {
-  if (client) {
-    client.close();
+  if (sqlite) {
+    sqlite.close();
     logger.info('Database connection closed');
   }
 }

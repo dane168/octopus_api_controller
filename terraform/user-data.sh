@@ -32,7 +32,7 @@ chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 echo "Installing buildx version: $BUILDX_VERSION"
 curl -SL -o /usr/local/lib/docker/cli-plugins/docker-buildx \
-  "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-arm64"
+  "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-arm64"
 chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 
 # Verify buildx works

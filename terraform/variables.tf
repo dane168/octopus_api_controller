@@ -59,3 +59,8 @@ variable "log_level" {
   type        = string
   default     = "info"
 }
+
+variable "github_repo" {
+  description = "GitHub repository (owner/repo format) for cloning code"
+  type        = string
+}

@@ -6,19 +6,17 @@ exec > >(tee /var/log/user-data.log) 2>&1
 echo "Starting user-data script at $(date)"
 
 # Variables from Terraform
-AWS_REGION="${aws_region}"
-ECR_BACKEND_URL="${ecr_backend_url}"
-ECR_FRONTEND_URL="${ecr_frontend_url}"
 GOOGLE_CLIENT_ID="${google_client_id}"
 JWT_SECRET="${jwt_secret}"
 ENCRYPTION_KEY="${encryption_key}"
 LOG_LEVEL="${log_level}"
+GITHUB_REPO="${github_repo}"
 
 # Update system
 dnf update -y
 
-# Install Docker
-dnf install -y docker
+# Install Docker and Git
+dnf install -y docker git
 
 # Start and enable Docker
 systemctl start docker
@@ -31,9 +29,6 @@ chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Add ec2-user to docker group
 usermod -aG docker ec2-user
-
-# Install AWS CLI (for ECR login)
-dnf install -y aws-cli
 
 # Wait for EBS volume to be attached
 echo "Waiting for EBS volume..."
@@ -68,8 +63,12 @@ chown -R 1000:1000 /data/octopus
 mkdir -p /opt/octopus-controller
 cd /opt/octopus-controller
 
-# Get public IP for FRONTEND_URL
+# Get public IP and create nip.io URL (works with Google OAuth)
 PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+NIP_IO_URL="http://$(echo $PUBLIC_IP | tr '.' '-').nip.io"
+
+echo "Public IP: $PUBLIC_IP"
+echo "nip.io URL: $NIP_IO_URL"
 
 # Create environment file
 cat > .env << EOF
@@ -77,76 +76,41 @@ GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 JWT_SECRET=$JWT_SECRET
 ENCRYPTION_KEY=$ENCRYPTION_KEY
 LOG_LEVEL=$LOG_LEVEL
-FRONTEND_URL=http://$PUBLIC_IP
+FRONTEND_URL=$NIP_IO_URL
 EOF
 
-# Create docker-compose.yml with ECR image URLs
-cat > docker-compose.yml << EOF
-version: '3.8'
+# Clone the repository
+echo "Cloning repository: $GITHUB_REPO"
+git clone https://github.com/$GITHUB_REPO.git repo || echo "Repo may already exist"
 
-services:
-  backend:
-    image: $ECR_BACKEND_URL:latest
-    container_name: octopus-backend
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - PORT=8000
-      - DATABASE_PATH=/data/octopus-controller.db
-      - GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
-      - JWT_SECRET=$JWT_SECRET
-      - ENCRYPTION_KEY=$ENCRYPTION_KEY
-      - FRONTEND_URL=http://$PUBLIC_IP
-      - LOG_LEVEL=$LOG_LEVEL
-    volumes:
-      - /data/octopus:/data
-    expose:
-      - "8000"
-    networks:
-      - octopus-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-
-  frontend:
-    image: $ECR_FRONTEND_URL:latest
-    container_name: octopus-frontend
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - octopus-network
-
-networks:
-  octopus-network:
-    driver: bridge
-EOF
-
-# Create ECR login and update script
-cat > /opt/octopus-controller/update.sh << 'SCRIPT'
+# Create deploy script (used by GitHub Actions via SSM)
+cat > /opt/octopus-controller/deploy.sh << SCRIPT
 #!/bin/bash
 set -e
 cd /opt/octopus-controller
 
-# Login to ECR
-aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin $(echo ${ecr_backend_url} | cut -d'/' -f1)
+# Pull latest code
+if [ -d repo ]; then
+  cd repo
+  git pull
+else
+  git clone https://github.com/$GITHUB_REPO.git repo
+  cd repo
+fi
 
-# Pull latest images and restart
-docker compose pull
-docker compose up -d
+# Build and deploy
+docker compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env build
+docker compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env down || true
+docker compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env up -d
+
+# Cleanup old images
 docker system prune -f
 
-echo "Update completed at $(date)"
+echo "Deploy completed at \$(date)"
 SCRIPT
-chmod +x /opt/octopus-controller/update.sh
+chmod +x /opt/octopus-controller/deploy.sh
 
-# Create systemd service for auto-start
+# Create systemd service for auto-start on reboot
 cat > /etc/systemd/system/octopus-controller.service << 'SERVICE'
 [Unit]
 Description=Octopus Controller Docker Compose
@@ -157,30 +121,26 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/octopus-controller
-ExecStartPre=/bin/bash -c 'aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin $(echo ${ecr_backend_url} | cut -d"/" -f1)'
-ExecStart=/usr/local/lib/docker/cli-plugins/docker-compose up -d
-ExecStop=/usr/local/lib/docker/cli-plugins/docker-compose down
+WorkingDirectory=/opt/octopus-controller/repo
+ExecStart=/usr/local/lib/docker/cli-plugins/docker-compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env up -d
+ExecStop=/usr/local/lib/docker/cli-plugins/docker-compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env down
 
 [Install]
 WantedBy=multi-user.target
 SERVICE
 
-# Replace variables in systemd service
-sed -i "s|\${aws_region}|$AWS_REGION|g" /etc/systemd/system/octopus-controller.service
-sed -i "s|\${ecr_backend_url}|$ECR_BACKEND_URL|g" /etc/systemd/system/octopus-controller.service
-
-# Also fix the update script
-sed -i "s|\${aws_region}|$AWS_REGION|g" /opt/octopus-controller/update.sh
-sed -i "s|\${ecr_backend_url}|$ECR_BACKEND_URL|g" /opt/octopus-controller/update.sh
-
 systemctl daemon-reload
 systemctl enable octopus-controller.service
 
-# Try to start the app (will fail if images don't exist yet, that's OK)
-echo "Attempting to start application..."
-/opt/octopus-controller/update.sh || echo "Images not yet pushed to ECR - run GitHub Actions to deploy"
-
+echo "============================================"
 echo "User-data script completed at $(date)"
 echo "EC2 instance is ready!"
-echo "Push images to ECR and they will be automatically pulled."
+echo ""
+echo "FRONTEND_URL: $NIP_IO_URL"
+echo ""
+echo "Add this to Google OAuth:"
+echo "  Authorized JavaScript origins: $NIP_IO_URL"
+echo "  Authorized redirect URIs: $NIP_IO_URL"
+echo ""
+echo "Run 'git push' to trigger deployment via GitHub Actions"
+echo "============================================"

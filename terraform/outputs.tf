@@ -43,15 +43,9 @@ output "ebs_volume_id" {
   value       = aws_ebs_volume.data.id
 }
 
-# ECR Outputs - needed for GitHub Actions secrets
-output "ecr_backend_url" {
-  description = "ECR Backend repository URL (add to GitHub secrets as ECR_BACKEND_URL)"
-  value       = aws_ecr_repository.backend.repository_url
-}
-
-output "ecr_frontend_url" {
-  description = "ECR Frontend repository URL (add to GitHub secrets as ECR_FRONTEND_URL)"
-  value       = aws_ecr_repository.frontend.repository_url
+output "nip_io_url" {
+  description = "nip.io URL for Google OAuth (auto-generated from public IP)"
+  value       = "http://${replace(aws_eip.app.public_ip, ".", "-")}.nip.io"
 }
 
 # GitHub Secrets Summary
@@ -67,8 +61,11 @@ output "github_secrets_needed" {
     AWS_ACCESS_KEY_ID     = (your AWS access key)
     AWS_SECRET_ACCESS_KEY = (your AWS secret key)
     EC2_INSTANCE_ID       = ${aws_instance.app.id}
-    ECR_BACKEND_URL       = ${aws_ecr_repository.backend.repository_url}
-    ECR_FRONTEND_URL      = ${aws_ecr_repository.frontend.repository_url}
+
+    ============================================
+
+    Add this URL to Google OAuth Console:
+    ${replace(aws_eip.app.public_ip, ".", "-")}.nip.io
 
     ============================================
   EOT

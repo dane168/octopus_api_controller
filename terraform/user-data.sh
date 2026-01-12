@@ -27,6 +27,13 @@ mkdir -p /usr/local/lib/docker/cli-plugins
 curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64" -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
+# Install Docker Buildx (required for compose build)
+curl -SL "https://github.com/docker/buildx/releases/latest/download/buildx-v0.19.3.linux-arm64" -o /usr/local/lib/docker/cli-plugins/docker-buildx
+chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+
+# Create buildx builder
+docker buildx create --use --name multiarch --driver docker-container
+
 # Add ec2-user to docker group
 usermod -aG docker ec2-user
 

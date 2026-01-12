@@ -6,19 +6,23 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy workspace config
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+# Copy workspace config and tsconfig
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 
-# Copy package.json files for all packages
-COPY packages/shared/package.json packages/shared/
-COPY apps/frontend/package.json apps/frontend/
+# Copy package.json and tsconfig files for all packages
+COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/
+COPY apps/frontend/package.json apps/frontend/tsconfig.json apps/frontend/tsconfig.node.json apps/frontend/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source files
-COPY packages/shared packages/shared
-COPY apps/frontend apps/frontend
+COPY packages/shared/src packages/shared/src
+COPY apps/frontend/src apps/frontend/src
+COPY apps/frontend/index.html apps/frontend/
+COPY apps/frontend/vite.config.ts apps/frontend/
+COPY apps/frontend/tailwind.config.js apps/frontend/
+COPY apps/frontend/postcss.config.js apps/frontend/
 
 # Build shared package first, then frontend
 RUN pnpm --filter @octopus-controller/shared build

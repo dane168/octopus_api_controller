@@ -9,19 +9,19 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy workspace config
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+# Copy workspace config and tsconfig
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 
-# Copy package.json files for all packages
-COPY packages/shared/package.json packages/shared/
-COPY apps/backend/package.json apps/backend/
+# Copy package.json and tsconfig files for all packages
+COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/
+COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/
 
 # Install dependencies (includes native module compilation for ARM64)
 RUN pnpm install --frozen-lockfile
 
 # Copy source files
-COPY packages/shared packages/shared
-COPY apps/backend apps/backend
+COPY packages/shared/src packages/shared/src
+COPY apps/backend/src apps/backend/src
 
 # Build shared package first, then backend
 RUN pnpm --filter @octopus-controller/shared build

@@ -79,22 +79,32 @@ LOG_LEVEL=$LOG_LEVEL
 FRONTEND_URL=$NIP_IO_URL
 EOF
 
-# Clone the repository
-echo "Cloning repository: $GITHUB_REPO"
-git clone https://github.com/$GITHUB_REPO.git repo || echo "Repo may already exist"
-
 # Create deploy script (used by GitHub Actions via SSM)
-cat > /opt/octopus-controller/deploy.sh << SCRIPT
+# Note: GITHUB_TOKEN is passed as env var from GitHub Actions
+cat > /opt/octopus-controller/deploy.sh << 'DEPLOYSCRIPT'
 #!/bin/bash
 set -e
 cd /opt/octopus-controller
 
+# Read repo from config file
+GITHUB_REPO=$(cat /opt/octopus-controller/.github_repo)
+
+# Check for GitHub token (required for private repos)
+if [ -z "$GITHUB_TOKEN" ]; then
+  echo "Error: GITHUB_TOKEN not provided. Cannot clone private repo."
+  exit 1
+fi
+
+# Configure git to use token
+REPO_URL="https://x-access-token:$GITHUB_TOKEN@github.com/$GITHUB_REPO.git"
+
 # Pull latest code
 if [ -d repo ]; then
   cd repo
+  git remote set-url origin "$REPO_URL"
   git pull
 else
-  git clone https://github.com/$GITHUB_REPO.git repo
+  git clone "$REPO_URL" repo
   cd repo
 fi
 
@@ -106,8 +116,11 @@ docker compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-control
 # Cleanup old images
 docker system prune -f
 
-echo "Deploy completed at \$(date)"
-SCRIPT
+echo "Deploy completed at $(date)"
+DEPLOYSCRIPT
+
+# Store github repo in a file for the deploy script to read
+echo "${github_repo}" > /opt/octopus-controller/.github_repo
 chmod +x /opt/octopus-controller/deploy.sh
 
 # Create systemd service for auto-start on reboot

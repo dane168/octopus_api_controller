@@ -22,12 +22,12 @@ jobs:
 
       - name: Deploy and build on EC2
         run: |
-          # Send command to EC2 to run deploy script
+          # Send command to EC2 to run deploy script with GitHub token
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
             --timeout-seconds 600 \
-            --parameters 'commands=["/opt/octopus-controller/deploy.sh"]' \
+            --parameters "commands=[\"GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}' /opt/octopus-controller/deploy.sh\"]" \
             --query "Command.CommandId" \
             --output text)
 

@@ -1,5 +1,5 @@
-# Build stage - ARM64 compatible
-FROM --platform=linux/arm64 node:20-alpine AS builder
+# Build stage
+FROM node:20-alpine AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -29,7 +29,7 @@ RUN pnpm --filter @octopus-controller/shared build
 RUN pnpm --filter frontend build
 
 # Production stage - Nginx for serving static files
-FROM --platform=linux/arm64 nginx:alpine AS runner
+FROM nginx:alpine AS runner
 
 # Copy built static files
 COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html

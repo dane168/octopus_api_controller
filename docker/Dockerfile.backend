@@ -1,5 +1,5 @@
-# Build stage - ARM64 compatible
-FROM --platform=linux/arm64 node:20-alpine AS builder
+# Build stage
+FROM node:20-alpine AS builder
 
 # Install build dependencies for better-sqlite3
 RUN apk add --no-cache python3 make g++
@@ -28,7 +28,7 @@ RUN pnpm --filter @octopus-controller/shared build
 RUN pnpm --filter backend build
 
 # Production stage - optimized for small memory footprint
-FROM --platform=linux/arm64 node:20-alpine AS runner
+FROM node:20-alpine AS runner
 
 # Only install runtime requirements
 RUN corepack enable && corepack prepare pnpm@latest --activate

@@ -22,6 +22,12 @@ resource "aws_iam_role_policy_attachment" "ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# ECR read-only policy for pulling images
+resource "aws_iam_role_policy_attachment" "ecr" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
 # Instance Profile
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "octopus-controller-instance-profile"
@@ -45,13 +51,15 @@ resource "aws_instance" "app" {
     encrypted             = true
   }
 
-  # User data script to set up Docker (builds happen on EC2 via GitHub Actions)
+  # User data script to set up Docker (images pulled from ECR, no builds on EC2)
   user_data = base64encode(templatefile("${path.module}/user-data.sh", {
     google_client_id = var.google_client_id
     jwt_secret       = var.jwt_secret
     encryption_key   = var.encryption_key
     log_level        = var.log_level
-    github_repo      = var.github_repo
+    ecr_backend_url  = aws_ecr_repository.backend.repository_url
+    ecr_frontend_url = aws_ecr_repository.frontend.repository_url
+    aws_region       = var.aws_region
   }))
 
   # Enable detailed monitoring (optional, costs extra)

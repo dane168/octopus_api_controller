@@ -10,13 +10,15 @@ GOOGLE_CLIENT_ID="${google_client_id}"
 JWT_SECRET="${jwt_secret}"
 ENCRYPTION_KEY="${encryption_key}"
 LOG_LEVEL="${log_level}"
-GITHUB_REPO="${github_repo}"
+ECR_BACKEND_URL="${ecr_backend_url}"
+ECR_FRONTEND_URL="${ecr_frontend_url}"
+AWS_REGION="${aws_region}"
 
 # Update system
 dnf update -y
 
-# Install Docker and Git
-dnf install -y docker git
+# Install Docker
+dnf install -y docker
 
 # Start and enable Docker
 systemctl start docker
@@ -26,17 +28,6 @@ systemctl enable docker
 mkdir -p /usr/local/lib/docker/cli-plugins
 curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64" -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-
-# Install Docker Buildx (required for compose build)
-# Note: Don't fail if buildx install fails - compose can still work
-BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-echo "Installing buildx version: $BUILDX_VERSION"
-curl -SL -o /usr/local/lib/docker/cli-plugins/docker-buildx \
-  "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-arm64"
-chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
-
-# Verify buildx works
-docker buildx version || echo "Warning: buildx not working, continuing anyway"
 
 # Add ec2-user to docker group
 usermod -aG docker ec2-user
@@ -90,48 +81,70 @@ LOG_LEVEL=$LOG_LEVEL
 FRONTEND_URL=$NIP_IO_URL
 EOF
 
+# Store ECR URLs for deploy script
+cat > .ecr_config << EOF
+ECR_BACKEND_URL=$ECR_BACKEND_URL
+ECR_FRONTEND_URL=$ECR_FRONTEND_URL
+AWS_REGION=$AWS_REGION
+EOF
+
+# Create docker-compose file that uses ECR images
+cat > docker-compose.yml << COMPOSE
+services:
+  backend:
+    image: $ECR_BACKEND_URL:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /data/octopus:/app/data
+    networks:
+      - app-network
+
+  frontend:
+    image: $ECR_FRONTEND_URL:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+COMPOSE
+
 # Create deploy script (used by GitHub Actions via SSM)
-# Note: GITHUB_TOKEN is passed as env var from GitHub Actions
+# This script just pulls latest images and restarts - no building required!
 cat > /opt/octopus-controller/deploy.sh << 'DEPLOYSCRIPT'
 #!/bin/bash
 set -e
 cd /opt/octopus-controller
 
-# Read repo from config file
-GITHUB_REPO=$(cat /opt/octopus-controller/.github_repo)
+# Load ECR config
+source .ecr_config
 
-# Check for GitHub token (required for private repos)
-if [ -z "$GITHUB_TOKEN" ]; then
-  echo "Error: GITHUB_TOKEN not provided. Cannot clone private repo."
-  exit 1
-fi
+# Login to ECR
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_BACKEND_URL
 
-# Configure git to use token
-REPO_URL="https://x-access-token:$GITHUB_TOKEN@github.com/$GITHUB_REPO.git"
+# Pull latest images
+echo "Pulling latest images from ECR..."
+docker compose pull
 
-# Pull latest code
-if [ -d repo ]; then
-  cd repo
-  git remote set-url origin "$REPO_URL"
-  git pull
-else
-  git clone "$REPO_URL" repo
-  cd repo
-fi
-
-# Build and deploy
-docker compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env build
-docker compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env down || true
-docker compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env up -d
+# Restart containers with new images
+echo "Restarting containers..."
+docker compose down || true
+docker compose up -d
 
 # Cleanup old images
 docker system prune -f
 
 echo "Deploy completed at $(date)"
+docker ps
 DEPLOYSCRIPT
 
-# Store github repo in a file for the deploy script to read
-echo "${github_repo}" > /opt/octopus-controller/.github_repo
 chmod +x /opt/octopus-controller/deploy.sh
 
 # Create systemd service for auto-start on reboot
@@ -145,9 +158,10 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/octopus-controller/repo
-ExecStart=/usr/local/lib/docker/cli-plugins/docker-compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env up -d
-ExecStop=/usr/local/lib/docker/cli-plugins/docker-compose -f docker/docker-compose.prod.yml --env-file /opt/octopus-controller/.env down
+WorkingDirectory=/opt/octopus-controller
+ExecStartPre=/bin/bash -c 'source /opt/octopus-controller/.ecr_config && aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_BACKEND_URL'
+ExecStart=/usr/local/lib/docker/cli-plugins/docker-compose up -d
+ExecStop=/usr/local/lib/docker/cli-plugins/docker-compose down
 
 [Install]
 WantedBy=multi-user.target
@@ -166,5 +180,5 @@ echo "Add this to Google OAuth:"
 echo "  Authorized JavaScript origins: $NIP_IO_URL"
 echo "  Authorized redirect URIs: $NIP_IO_URL"
 echo ""
-echo "Run 'git push' to trigger deployment via GitHub Actions"
+echo "Push code to trigger GitHub Actions build and deploy"
 echo "============================================"

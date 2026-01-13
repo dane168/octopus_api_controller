@@ -48,6 +48,16 @@ output "nip_io_url" {
   value       = "http://${replace(aws_eip.app.public_ip, ".", "-")}.nip.io"
 }
 
+output "ecr_backend_url" {
+  description = "ECR Backend repository URL"
+  value       = aws_ecr_repository.backend.repository_url
+}
+
+output "ecr_frontend_url" {
+  description = "ECR Frontend repository URL"
+  value       = aws_ecr_repository.frontend.repository_url
+}
+
 # GitHub Secrets Summary
 output "github_secrets_needed" {
   description = "GitHub Actions secrets you need to configure"
@@ -61,6 +71,8 @@ output "github_secrets_needed" {
     AWS_ACCESS_KEY_ID     = (your AWS access key)
     AWS_SECRET_ACCESS_KEY = (your AWS secret key)
     EC2_INSTANCE_ID       = ${aws_instance.app.id}
+    ECR_BACKEND_URL       = ${aws_ecr_repository.backend.repository_url}
+    ECR_FRONTEND_URL      = ${aws_ecr_repository.frontend.repository_url}
 
     ============================================
 

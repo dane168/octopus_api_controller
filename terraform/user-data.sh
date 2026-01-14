@@ -13,6 +13,7 @@ LOG_LEVEL="${log_level}"
 ECR_BACKEND_URL="${ecr_backend_url}"
 ECR_FRONTEND_URL="${ecr_frontend_url}"
 AWS_REGION="${aws_region}"
+CUSTOM_DOMAIN="${custom_domain}"
 
 # Update system
 dnf update -y
@@ -65,12 +66,20 @@ chown -R 1000:1000 /data/octopus
 mkdir -p /opt/octopus-controller
 cd /opt/octopus-controller
 
-# Get public IP and create nip.io URL (works with Google OAuth)
+# Get public IP
 PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-NIP_IO_URL="http://$(echo $PUBLIC_IP | tr '.' '-').nip.io"
+
+# Use custom domain if provided, otherwise fall back to nip.io
+if [ -n "$CUSTOM_DOMAIN" ]; then
+  FRONTEND_URL="https://$CUSTOM_DOMAIN"
+  echo "Using custom domain: $CUSTOM_DOMAIN"
+else
+  FRONTEND_URL="http://$(echo $PUBLIC_IP | tr '.' '-').nip.io"
+  echo "Using nip.io URL: $FRONTEND_URL"
+fi
 
 echo "Public IP: $PUBLIC_IP"
-echo "nip.io URL: $NIP_IO_URL"
+echo "Frontend URL: $FRONTEND_URL"
 
 # Create environment file
 cat > .env << EOF
@@ -78,7 +87,7 @@ GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 JWT_SECRET=$JWT_SECRET
 ENCRYPTION_KEY=$ENCRYPTION_KEY
 LOG_LEVEL=$LOG_LEVEL
-FRONTEND_URL=$NIP_IO_URL
+FRONTEND_URL=$FRONTEND_URL
 EOF
 
 # Store ECR URLs for deploy script
@@ -97,7 +106,7 @@ services:
     env_file:
       - .env
     volumes:
-      - /data/octopus:/app/data
+      - /data/octopus:/data
     networks:
       - app-network
 
@@ -174,11 +183,11 @@ echo "============================================"
 echo "User-data script completed at $(date)"
 echo "EC2 instance is ready!"
 echo ""
-echo "FRONTEND_URL: $NIP_IO_URL"
+echo "FRONTEND_URL: $FRONTEND_URL"
 echo ""
 echo "Add this to Google OAuth:"
-echo "  Authorized JavaScript origins: $NIP_IO_URL"
-echo "  Authorized redirect URIs: $NIP_IO_URL"
+echo "  Authorized JavaScript origins: $FRONTEND_URL"
+echo "  Authorized redirect URIs: $FRONTEND_URL"
 echo ""
 echo "Push code to trigger GitHub Actions build and deploy"
 echo "============================================"

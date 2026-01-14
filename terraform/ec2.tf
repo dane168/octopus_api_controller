@@ -60,6 +60,7 @@ resource "aws_instance" "app" {
     ecr_backend_url  = aws_ecr_repository.backend.repository_url
     ecr_frontend_url = aws_ecr_repository.frontend.repository_url
     aws_region       = var.aws_region
+    custom_domain    = var.custom_domain
   }))
 
   # Enable detailed monitoring (optional, costs extra)

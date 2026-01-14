@@ -47,3 +47,16 @@ temp/
 .venv_win
 
 .claude
+
+# Sensitive data exports - never commit
+devices_tuya_export.json
+device_ids.txt
+snapshot.json
+*_export.json
+*_backup.json
+
+# Terraform (backup in case terraform/.gitignore missed)
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraform/

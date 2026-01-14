@@ -19,6 +19,7 @@ RUN pnpm install --frozen-lockfile
 # Copy source files
 COPY packages/shared/src packages/shared/src
 COPY apps/frontend/src apps/frontend/src
+COPY apps/frontend/public apps/frontend/public
 COPY apps/frontend/index.html apps/frontend/
 COPY apps/frontend/vite.config.ts apps/frontend/
 COPY apps/frontend/tailwind.config.js apps/frontend/

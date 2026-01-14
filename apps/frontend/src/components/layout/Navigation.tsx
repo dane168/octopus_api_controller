@@ -18,12 +18,14 @@ export function Navigation() {
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:sticky md:top-0 md:border-t-0 md:border-r md:h-screen md:w-64 md:flex-shrink-0 z-50">
       <div className="flex md:flex-col md:p-4 md:h-full md:overflow-y-auto">
         {/* Logo - Desktop only */}
-        <div className="hidden md:flex items-center gap-3 mb-8">
-          <img src="/logo.svg" alt="Energy Controller" className="w-10 h-10" />
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Energy Controller</h1>
-            <p className="text-sm text-gray-500">Octopus Agile</p>
+        <div className="hidden md:flex flex-col items-left gap-3 mb-8">
+          <div className="md:flex items-center gap-3">
+            <img src="/logo.svg" alt="Energy Controller" className="w-10 h-10" />
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Switchopus</h1>
+            </div>
           </div>
+          <p className="text-sm text-gray-500">A smart home device controller powered by Octopus Agile data.</p>  
         </div>
 
         {/* Navigation items */}

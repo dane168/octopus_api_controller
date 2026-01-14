@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="46" fill="#1E3A5F"/>
+
+  <!-- House outline -->
+  <path d="M50 20 L25 42 L25 75 L75 75 L75 42 Z"
+        stroke="#FF6B9D" stroke-width="4" stroke-linejoin="round" fill="none"/>
+
+  <!-- Door -->
+  <rect x="42" y="55" width="16" height="20" rx="2" fill="#FF6B9D"/>
+
+  <!-- Lightning bolt / power indicator -->
+  <path d="M52 30 L46 45 L52 45 L48 58 L58 42 L52 42 Z"
+        fill="#4AE3B5"/>
+
+  <!-- Window glow effect -->
+  <circle cx="50" cy="44" r="8" fill="#4AE3B5" opacity="0.2"/>
+</svg>

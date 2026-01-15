@@ -61,7 +61,7 @@ variable "log_level" {
 }
 
 variable "custom_domain" {
-  description = "Custom domain for the application (e.g., switchop.us). Leave empty to use nip.io"
+  description = "Custom domain for the application (e.g., switchopus.com). Leave empty to use nip.io"
   type        = string
-  default     = "switchop.us"
+  default     = "switchopus.com"
 }

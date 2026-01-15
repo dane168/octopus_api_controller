@@ -53,10 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(TOKEN_KEY, data.token);
       setToken(data.token);
       queryClient.setQueryData(['auth', 'user'], data.user);
-      // Invalidate all data queries to refetch with user context
-      queryClient.invalidateQueries({ queryKey: ['devices'] });
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      // Clear all cached data and refetch with new user context
+      // Remove all queries except auth to force fresh fetch for new user
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth' });
     },
   });
 

@@ -60,3 +60,5 @@ snapshot.json
 *.tfstate.*
 terraform.tfvars
 .terraform/
+
+.mcp.json

@@ -4,8 +4,8 @@ FROM node:20-alpine AS builder
 # Install build dependencies for better-sqlite3
 RUN apk add --no-cache python3 make g++
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm - pin to specific version to avoid QEMU issues
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
@@ -30,8 +30,8 @@ RUN pnpm --filter backend build
 # Production stage - optimized for small memory footprint
 FROM node:20-alpine AS runner
 
-# Only install runtime requirements
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Only install runtime requirements - pin to specific version
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 

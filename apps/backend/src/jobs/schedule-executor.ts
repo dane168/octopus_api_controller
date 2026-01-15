@@ -35,7 +35,7 @@ function hasActiveSlot(config: TimeSlotsConfig, now: Date): boolean {
 }
 
 /**
- * Check if it's the start of a slot (within first 2 minutes)
+ * Check if it's the exact start of a slot (at the exact minute)
  */
 function isSlotStart(slot: { start: string; end: string }, now: Date): boolean {
   const currentHour = now.getHours();
@@ -45,12 +45,12 @@ function isSlotStart(slot: { start: string; end: string }, now: Date): boolean {
   const [startHour, startMin] = slot.start.split(':').map(Number);
   const startMinutes = startHour * 60 + startMin;
 
-  // Check if we're within first 2 minutes of the slot
-  return currentTimeMinutes >= startMinutes && currentTimeMinutes < startMinutes + 2;
+  // Check if we're at the exact start minute of the slot
+  return currentTimeMinutes === startMinutes;
 }
 
 /**
- * Check if it's the end of a slot (within last 2 minutes before end)
+ * Check if it's the exact end of a slot (at the exact minute)
  */
 function isSlotEnd(slot: { start: string; end: string }, now: Date): boolean {
   const currentHour = now.getHours();
@@ -60,13 +60,13 @@ function isSlotEnd(slot: { start: string; end: string }, now: Date): boolean {
   const [endHour, endMin] = slot.end.split(':').map(Number);
   let endMinutes = endHour * 60 + endMin;
 
-  // Handle midnight crossing
+  // Handle midnight (00:00 means end of day)
   if (endMinutes === 0) {
     endMinutes = 24 * 60;
   }
 
-  // Check if we're within 2 minutes before the end of the slot
-  return currentTimeMinutes >= endMinutes - 2 && currentTimeMinutes < endMinutes;
+  // Check if we're at the exact end minute of the slot
+  return currentTimeMinutes === endMinutes;
 }
 
 /**

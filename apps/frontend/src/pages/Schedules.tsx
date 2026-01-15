@@ -366,22 +366,33 @@ function ScheduleModal({
   const [repeat, setRepeat] = useState<'once' | 'daily'>('daily');
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  // Pre-populate form when editing
+  // Pre-populate form when editing, or reset when creating new
   useEffect(() => {
-    if (isOpen && editingSchedule) {
-      const config = editingSchedule.config as TimeSlotsConfig;
-      setName(editingSchedule.name);
-      setSelectedDevices(new Set(editingSchedule.deviceIds));
-      // Convert slots array to Map
-      const slotsMap = new Map<string, TimeSlot>();
-      config.slots.forEach(slot => {
-        const slotKey = `${slot.start}-${slot.end}`;
-        slotsMap.set(slotKey, slot);
-      });
-      setSelectedSlots(slotsMap);
-      setAction(config.action);
-      setRepeat(config.repeat);
-      setStep(1);
+    if (isOpen) {
+      if (editingSchedule) {
+        // Edit mode - populate with existing data
+        const config = editingSchedule.config as TimeSlotsConfig;
+        setName(editingSchedule.name);
+        setSelectedDevices(new Set(editingSchedule.deviceIds));
+        // Convert slots array to Map
+        const slotsMap = new Map<string, TimeSlot>();
+        config.slots.forEach(slot => {
+          const slotKey = `${slot.start}-${slot.end}`;
+          slotsMap.set(slotKey, slot);
+        });
+        setSelectedSlots(slotsMap);
+        setAction(config.action);
+        setRepeat(config.repeat);
+        setStep(1);
+      } else {
+        // Create mode - reset form to defaults
+        setName('');
+        setSelectedDevices(new Set());
+        setSelectedSlots(new Map());
+        setAction('on');
+        setRepeat('daily');
+        setStep(1);
+      }
     }
   }, [isOpen, editingSchedule]);
 

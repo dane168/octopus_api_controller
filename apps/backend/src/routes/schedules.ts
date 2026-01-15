@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import * as scheduleRepo from '../repositories/schedules.js';
+import { resolveSchedules } from '../services/schedule-resolver.js';
 import { logger } from '../utils/logger.js';
 import { optionalAuth } from '../middleware/auth.js';
 
@@ -77,6 +78,48 @@ scheduleRoutes.get('/', async (req: Request, res: Response) => {
   } catch (error) {
     logger.error({ error }, 'Failed to get schedules');
     res.status(500).json({ error: 'Failed to get schedules' });
+  }
+});
+
+/**
+ * GET /api/schedules/effective
+ * Get effective schedules per device with merged time slots
+ * Note: This route must come before /:id routes to avoid "effective" being treated as an ID
+ */
+scheduleRoutes.get('/effective', async (req: Request, res: Response) => {
+  try {
+    // Get all enabled schedules for the user
+    const allSchedules = await scheduleRepo.getAllSchedules(req.userId);
+    const enabledSchedules = allSchedules.filter((s) => s.enabled);
+
+    // Resolve schedules into effective per-device schedules
+    const { effectiveSchedules, conflicts } = await resolveSchedules(enabledSchedules);
+
+    res.json({ effectiveSchedules, conflicts });
+  } catch (error) {
+    logger.error({ error }, 'Failed to get effective schedules');
+    res.status(500).json({ error: 'Failed to get effective schedules' });
+  }
+});
+
+/**
+ * GET /api/schedules/conflicts
+ * Get schedule conflicts (devices with conflicting actions at the same time)
+ * Note: This route must come before /:id routes to avoid "conflicts" being treated as an ID
+ */
+scheduleRoutes.get('/conflicts', async (req: Request, res: Response) => {
+  try {
+    // Get all enabled schedules for the user
+    const allSchedules = await scheduleRepo.getAllSchedules(req.userId);
+    const enabledSchedules = allSchedules.filter((s) => s.enabled);
+
+    // Resolve schedules and extract conflicts
+    const { conflicts } = await resolveSchedules(enabledSchedules);
+
+    res.json({ conflicts });
+  } catch (error) {
+    logger.error({ error }, 'Failed to get schedule conflicts');
+    res.status(500).json({ error: 'Failed to get schedule conflicts' });
   }
 });
 

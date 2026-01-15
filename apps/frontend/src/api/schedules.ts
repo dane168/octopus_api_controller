@@ -6,6 +6,8 @@ import type {
   UpdateScheduleInput,
   ScheduleLog,
   EnrichedScheduleLog,
+  EffectiveDeviceSchedule,
+  ScheduleConflict,
 } from '@octopus-controller/shared';
 
 interface SchedulesResponse {
@@ -22,6 +24,15 @@ interface ScheduleLogsResponse {
 
 interface AllLogsResponse {
   logs: EnrichedScheduleLog[];
+}
+
+interface EffectiveSchedulesResponse {
+  effectiveSchedules: EffectiveDeviceSchedule[];
+  conflicts: ScheduleConflict[];
+}
+
+interface ConflictsResponse {
+  conflicts: ScheduleConflict[];
 }
 
 export async function getSchedules(): Promise<ScheduleWithDevices[]> {
@@ -65,4 +76,17 @@ export async function getAllLogs(limit?: number): Promise<EnrichedScheduleLog[]>
     params: limit ? { limit } : undefined,
   });
   return data.logs;
+}
+
+export async function getEffectiveSchedules(): Promise<{
+  effectiveSchedules: EffectiveDeviceSchedule[];
+  conflicts: ScheduleConflict[];
+}> {
+  const { data } = await api.get<EffectiveSchedulesResponse>('/schedules/effective');
+  return data;
+}
+
+export async function getConflicts(): Promise<ScheduleConflict[]> {
+  const { data } = await api.get<ConflictsResponse>('/schedules/conflicts');
+  return data.conflicts;
 }

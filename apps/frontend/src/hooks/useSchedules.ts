@@ -82,3 +82,21 @@ export function useAllLogs(limit?: number) {
     staleTime: 15 * 1000,
   });
 }
+
+export function useEffectiveSchedules() {
+  return useQuery({
+    queryKey: ['schedules', 'effective'],
+    queryFn: () => schedulesApi.getEffectiveSchedules(),
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useConflicts() {
+  return useQuery({
+    queryKey: ['schedules', 'conflicts'],
+    queryFn: () => schedulesApi.getConflicts(),
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds
+    staleTime: 10 * 1000,
+  });
+}

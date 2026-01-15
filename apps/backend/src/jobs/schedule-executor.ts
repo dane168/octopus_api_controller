@@ -2,78 +2,47 @@ import cron from 'node-cron';
 import * as scheduleRepo from '../repositories/schedules.js';
 import * as devicesRepo from '../repositories/devices.js';
 import * as tuyaService from '../services/tuya/index.js';
+import { resolveSchedules } from '../services/schedule-resolver.js';
 import { logger } from '../utils/logger.js';
-import type { Schedule, TimeSlotsConfig, DeviceAction } from '@octopus-controller/shared';
+import type { DeviceAction, EffectiveSlot, Schedule, TimeSlotsConfig } from '@octopus-controller/shared';
 
 /**
- * Check if a time slot matches the current time
+ * Convert HH:MM time string to minutes since midnight
  */
-function isTimeSlotActive(slot: { start: string; end: string }, now: Date): boolean {
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTimeMinutes = currentHour * 60 + currentMinute;
-
-  const [startHour, startMin] = slot.start.split(':').map(Number);
-  const [endHour, endMin] = slot.end.split(':').map(Number);
-
-  const startMinutes = startHour * 60 + startMin;
-  const endMinutes = endHour * 60 + endMin;
-
-  // Handle overnight slots (e.g., 23:00 - 00:30)
-  if (endMinutes < startMinutes) {
-    return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
-  }
-
-  return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
-}
-
-/**
- * Check if any time slot in the schedule is active
- */
-function hasActiveSlot(config: TimeSlotsConfig, now: Date): boolean {
-  return config.slots.some((slot) => isTimeSlotActive(slot, now));
+function timeToMinutes(time: string): number {
+  const [hours, mins] = time.split(':').map(Number);
+  return hours * 60 + mins;
 }
 
 /**
  * Check if it's the exact start of a slot (at the exact minute)
  */
-function isSlotStart(slot: { start: string; end: string }, now: Date): boolean {
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTimeMinutes = currentHour * 60 + currentMinute;
-
-  const [startHour, startMin] = slot.start.split(':').map(Number);
-  const startMinutes = startHour * 60 + startMin;
-
-  // Check if we're at the exact start minute of the slot
-  return currentTimeMinutes === startMinutes;
+function isSlotStart(slot: { start: string }, now: Date): boolean {
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  return currentMinutes === timeToMinutes(slot.start);
 }
 
 /**
  * Check if it's the exact end of a slot (at the exact minute)
  */
-function isSlotEnd(slot: { start: string; end: string }, now: Date): boolean {
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTimeMinutes = currentHour * 60 + currentMinute;
-
-  const [endHour, endMin] = slot.end.split(':').map(Number);
-  let endMinutes = endHour * 60 + endMin;
+function isSlotEnd(slot: { end: string }, now: Date): boolean {
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  let endMinutes = timeToMinutes(slot.end);
 
   // Handle midnight (00:00 means end of day)
   if (endMinutes === 0) {
     endMinutes = 24 * 60;
   }
 
-  // Check if we're at the exact end minute of the slot
-  return currentTimeMinutes === endMinutes;
+  return currentMinutes === endMinutes;
 }
 
 /**
  * Execute a device action and log the result
+ * Now accepts multiple schedule IDs for merged slots
  */
 async function executeDeviceAction(
-  scheduleId: string,
+  scheduleIds: string[],
   deviceId: string,
   action: DeviceAction,
   reason: string
@@ -82,15 +51,18 @@ async function executeDeviceAction(
     const device = await devicesRepo.getDeviceById(deviceId);
 
     if (!device) {
-      logger.warn({ scheduleId, deviceId }, 'Device not found for schedule execution');
-      await scheduleRepo.createScheduleLog({
-        scheduleId,
-        deviceId,
-        action,
-        triggerReason: reason,
-        success: false,
-        errorMessage: 'Device not found',
-      });
+      logger.warn({ scheduleIds, deviceId }, 'Device not found for schedule execution');
+      // Log for first schedule
+      if (scheduleIds.length > 0) {
+        await scheduleRepo.createScheduleLog({
+          scheduleId: scheduleIds[0],
+          deviceId,
+          action,
+          triggerReason: reason,
+          success: false,
+          errorMessage: 'Device not found',
+        });
+      }
       return false;
     }
 
@@ -99,16 +71,21 @@ async function executeDeviceAction(
     // Update device status
     await devicesRepo.updateDeviceStatus(deviceId, 'online');
 
-    // Log success
-    await scheduleRepo.createScheduleLog({
-      scheduleId,
-      deviceId,
-      action,
-      triggerReason: reason,
-      success: true,
-    });
+    // Log success for all contributing schedules
+    for (const scheduleId of scheduleIds) {
+      await scheduleRepo.createScheduleLog({
+        scheduleId,
+        deviceId,
+        action,
+        triggerReason: reason,
+        success: true,
+      });
+    }
 
-    logger.info({ scheduleId, deviceId, deviceName: device.name, action, reason }, 'Schedule action executed');
+    logger.info(
+      { scheduleIds, deviceId, deviceName: device.name, action, reason },
+      'Schedule action executed (merged)'
+    );
     return true;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -116,85 +93,78 @@ async function executeDeviceAction(
     // Update device status
     await devicesRepo.updateDeviceStatus(deviceId, 'offline');
 
-    // Log failure
-    await scheduleRepo.createScheduleLog({
-      scheduleId,
-      deviceId,
-      action,
-      triggerReason: reason,
-      success: false,
-      errorMessage,
-    });
+    // Log failure for all contributing schedules
+    for (const scheduleId of scheduleIds) {
+      await scheduleRepo.createScheduleLog({
+        scheduleId,
+        deviceId,
+        action,
+        triggerReason: reason,
+        success: false,
+        errorMessage,
+      });
+    }
 
-    logger.error({ scheduleId, deviceId, action, error: errorMessage }, 'Schedule action failed');
+    logger.error({ scheduleIds, deviceId, action, error: errorMessage }, 'Schedule action failed');
     return false;
   }
 }
 
 /**
- * Process a time_slots schedule
+ * Check and disable one-time schedules after execution
  */
-async function processTimeSlotsSchedule(schedule: Schedule): Promise<void> {
-  const config = schedule.config as TimeSlotsConfig;
-  const now = new Date();
-
-  // For 'once' schedules, check the date
-  if (config.repeat === 'once' && config.date) {
-    const scheduleDate = config.date;
-    const todayDate = now.toISOString().split('T')[0];
-
-    if (scheduleDate !== todayDate) {
-      // Not the right day for this one-time schedule
-      return;
-    }
-  }
-
-  // Check each slot for start/end transitions
-  for (const slot of config.slots) {
-    if (isSlotStart(slot, now)) {
-      // Slot is starting
-      const action = config.action;
-      const reason = `Slot ${slot.start}-${slot.end} started`;
-
-      for (const deviceId of schedule.deviceIds) {
-        await executeDeviceAction(schedule.id, deviceId, action, reason);
-      }
-
-      // For 'once' schedules, disable after execution
+async function disableOnceSchedulesIfNeeded(
+  scheduleIds: string[],
+  allSchedules: Schedule[]
+): Promise<void> {
+  for (const scheduleId of scheduleIds) {
+    const schedule = allSchedules.find((s) => s.id === scheduleId);
+    if (schedule && schedule.config.type === 'time_slots') {
+      const config = schedule.config as TimeSlotsConfig;
       if (config.repeat === 'once') {
-        await scheduleRepo.updateSchedule(schedule.id, { enabled: false });
-        logger.info({ scheduleId: schedule.id }, 'One-time schedule disabled after execution');
-      }
-    } else if (isSlotEnd(slot, now) && config.action !== 'toggle') {
-      // Slot is ending - turn off devices (only for on/off actions, not toggle)
-      // Only turn off if the action was 'on' (we want to reverse the action)
-      if (config.action === 'on') {
-        const reason = `Slot ${slot.start}-${slot.end} ended`;
-
-        for (const deviceId of schedule.deviceIds) {
-          await executeDeviceAction(schedule.id, deviceId, 'off', reason);
-        }
+        await scheduleRepo.updateSchedule(scheduleId, { enabled: false });
+        logger.info({ scheduleId }, 'One-time schedule disabled after execution');
       }
     }
   }
 }
 
 /**
- * Evaluate and execute all enabled schedules
+ * Evaluate and execute all enabled schedules using merged/resolved slots
+ * This prevents flickering when adjacent slots from different schedules
+ * would otherwise turn a device off and immediately back on
  */
 async function evaluateSchedules(): Promise<void> {
   try {
     const enabledSchedules = await scheduleRepo.getEnabledSchedules();
+    const now = new Date();
 
-    for (const schedule of enabledSchedules) {
-      try {
-        if (schedule.config.type === 'time_slots') {
-          await processTimeSlotsSchedule(schedule);
+    // Resolve all schedules into effective per-device schedules
+    const { effectiveSchedules, conflicts } = await resolveSchedules(enabledSchedules);
+
+    // Log any conflicts (but still execute - conflicts are just warnings)
+    if (conflicts.length > 0) {
+      logger.warn({ conflicts }, 'Schedule conflicts detected');
+    }
+
+    // Process each device's effective schedule
+    for (const deviceSchedule of effectiveSchedules) {
+      for (const slot of deviceSchedule.slots) {
+        const scheduleIds = slot.sourceSchedules.map((s) => s.id);
+        const scheduleNames = slot.sourceSchedules.map((s) => s.name).join(', ');
+
+        if (isSlotStart(slot, now)) {
+          // Slot is starting
+          const reason = `Merged slot ${slot.start}-${slot.end} started (from: ${scheduleNames})`;
+          await executeDeviceAction(scheduleIds, deviceSchedule.deviceId, slot.action, reason);
+
+          // Disable one-time schedules after execution
+          await disableOnceSchedulesIfNeeded(scheduleIds, enabledSchedules);
+        } else if (isSlotEnd(slot, now) && slot.action === 'on') {
+          // Slot is ending - turn off devices (only for 'on' actions)
+          const reason = `Merged slot ${slot.start}-${slot.end} ended (from: ${scheduleNames})`;
+          await executeDeviceAction(scheduleIds, deviceSchedule.deviceId, 'off', reason);
         }
-        // Other schedule types can be added here later
-        // (price_threshold, cheapest_hours, time_range)
-      } catch (error) {
-        logger.error({ scheduleId: schedule.id, error }, 'Failed to process schedule');
       }
     }
   } catch (error) {

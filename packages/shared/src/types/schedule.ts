@@ -142,3 +142,44 @@ export interface EnrichedScheduleLog extends ScheduleLog {
   scheduleName: string;
   deviceName: string;
 }
+
+/**
+ * Effective time slot after merging adjacent slots
+ * Represents the actual time a device will be controlled
+ */
+export interface EffectiveSlot {
+  start: string;                // HH:MM format
+  end: string;                  // HH:MM format
+  action: DeviceAction;
+  sourceSchedules: {            // Which schedules contributed to this slot
+    id: string;
+    name: string;
+  }[];
+}
+
+/**
+ * Effective schedule for a single device
+ * Shows merged slots from all schedules affecting this device
+ */
+export interface EffectiveDeviceSchedule {
+  deviceId: string;
+  deviceName: string;
+  slots: EffectiveSlot[];
+}
+
+/**
+ * Schedule conflict - when a device has conflicting actions at the same time
+ */
+export interface ScheduleConflict {
+  deviceId: string;
+  deviceName: string;
+  timeSlot: {
+    start: string;
+    end: string;
+  };
+  conflictingActions: {
+    scheduleId: string;
+    scheduleName: string;
+    action: DeviceAction;
+  }[];
+}

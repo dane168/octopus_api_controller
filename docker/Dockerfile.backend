@@ -1,5 +1,4 @@
-# Single stage build - everything on target platform
-# Using node:20-slim instead of alpine for better QEMU compatibility
+# Build stage - using Debian slim for better QEMU compatibility
 FROM node:20-slim AS builder
 
 # Install build dependencies for better-sqlite3
@@ -17,8 +16,8 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/
 COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/
 
-# Install all dependencies including devDependencies for build
-RUN npm install --include=dev
+# Install dependencies using pnpm
+RUN pnpm install --frozen-lockfile
 
 # Copy source files
 COPY packages/shared/src packages/shared/src

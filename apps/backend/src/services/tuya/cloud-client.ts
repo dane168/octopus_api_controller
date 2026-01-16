@@ -15,6 +15,18 @@ interface TokenInfo {
 const tokenCache = new Map<string, TokenInfo>();
 
 /**
+ * Default timeout for Tuya API requests (30 seconds)
+ */
+const API_TIMEOUT_MS = 30000;
+
+/**
+ * Create an AbortSignal with timeout
+ */
+function createTimeoutSignal(timeoutMs: number): AbortSignal {
+  return AbortSignal.timeout(timeoutMs);
+}
+
+/**
  * Get Tuya API token (with caching)
  */
 async function getTuyaToken(
@@ -45,7 +57,8 @@ async function getTuyaToken(
       't': t,
       'sign': sign,
       'sign_method': 'HMAC-SHA256',
-    }
+    },
+    signal: createTimeoutSignal(API_TIMEOUT_MS),
   });
 
   const data = await response.json() as { success: boolean; result?: { access_token: string; expire_time: number; refresh_token: string; uid: string }; msg?: string };
@@ -68,10 +81,14 @@ async function getTuyaToken(
 }
 
 /**
- * Make a direct Tuya API call
- * Returns both the response and the token info (which includes uid)
+ * Tuya API error codes that indicate token issues
  */
-async function directTuyaRequest(
+const TOKEN_ERROR_CODES = [1010, 1011, 1012, 1013, 1014];
+
+/**
+ * Make a single Tuya API request (internal helper)
+ */
+async function makeTuyaRequest(
   accessId: string,
   accessSecret: string,
   endpoint: string,
@@ -117,10 +134,49 @@ async function directTuyaRequest(
     method,
     headers,
     body: bodyStr || undefined,
+    signal: createTimeoutSignal(API_TIMEOUT_MS),
   });
 
   const data = await response.json() as { success: boolean; code?: number; msg?: string; result?: any };
   return { ...data, tokenInfo };
+}
+
+/**
+ * Make a direct Tuya API call with automatic retry on token expiry or network failure
+ * Returns both the response and the token info (which includes uid)
+ */
+async function directTuyaRequest(
+  accessId: string,
+  accessSecret: string,
+  endpoint: string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  query?: Record<string, string | number | boolean>,
+  body?: any
+): Promise<{ success: boolean; code?: number; msg?: string; result?: any; tokenInfo?: TokenInfo }> {
+  const cacheKey = `${accessId}:${endpoint}`;
+
+  try {
+    const result = await makeTuyaRequest(accessId, accessSecret, endpoint, method, path, query, body);
+
+    // Check if the response indicates a token error
+    if (!result.success && result.code && TOKEN_ERROR_CODES.includes(result.code)) {
+      logger.warn({ code: result.code, msg: result.msg, path }, 'Tuya token error, clearing cache and retrying');
+      tokenCache.delete(cacheKey);
+      return makeTuyaRequest(accessId, accessSecret, endpoint, method, path, query, body);
+    }
+
+    return result;
+  } catch (error) {
+    // On network errors (fetch failed, timeout, etc.), clear cache and retry once
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.warn({ error: errorMessage, path }, 'Tuya API request failed, clearing token cache and retrying');
+
+    tokenCache.delete(cacheKey);
+
+    // Retry with fresh token
+    return makeTuyaRequest(accessId, accessSecret, endpoint, method, path, query, body);
+  }
 }
 
 /**
@@ -151,7 +207,8 @@ async function directTuyaApiTest(
       't': t,
       'sign': sign,
       'sign_method': 'HMAC-SHA256',
-    }
+    },
+    signal: createTimeoutSignal(API_TIMEOUT_MS),
   });
 
   return response.json() as Promise<{ success: boolean; code?: number; msg?: string; result?: any }>;

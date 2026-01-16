@@ -3,6 +3,7 @@ import { Calendar, Plus, Trash2, Power, Clock, Loader2, X, ToggleLeft, ToggleRig
 import { useSchedules, useCreateSchedule, useUpdateSchedule, useDeleteSchedule, useToggleSchedule, useScheduleLogs, useEffectiveSchedules } from '../hooks/useSchedules';
 import { useDevices } from '../hooks/useDevices';
 import { useNext24HoursPrices } from '../hooks/usePrices';
+import { DayTimelineCalendar } from '../components/schedules/DayTimelineCalendar';
 import type { Device, Price, ScheduleWithDevices, TimeSlotsConfig, DeviceAction, TimeSlot, EffectiveDeviceSchedule, ScheduleConflict, EffectiveSlot } from '@octopus-controller/shared';
 
 function formatTime(iso: string): string {
@@ -790,6 +791,12 @@ function EffectiveSchedulesView({
 
   return (
     <div className="space-y-4">
+      {/* Visual timeline calendar */}
+      <DayTimelineCalendar
+        effectiveSchedules={effectiveSchedules}
+        conflicts={conflicts}
+      />
+
       {/* Conflict summary banner */}
       {conflicts.length > 0 && (
         <div className="bg-red-100 border border-red-300 rounded-lg p-4 flex items-start gap-3">

@@ -1,8 +1,9 @@
-# Build stage - runs on native platform (no QEMU)
-FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
+# Single stage build - everything on target platform
+# Using node:20-slim instead of alpine for better QEMU compatibility
+FROM node:20-slim AS builder
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+# Install build dependencies for better-sqlite3
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
@@ -16,37 +17,19 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/
 COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/
 
-# Install dependencies on native platform (avoids QEMU issues)
-RUN pnpm install --frozen-lockfile
+# Install dependencies - use npm for better-sqlite3 to avoid pnpm QEMU issues
+RUN npm install
 
 # Copy source files
 COPY packages/shared/src packages/shared/src
 COPY apps/backend/src apps/backend/src
 
-# Build shared package first, then backend (TypeScript compilation is platform-independent)
+# Build shared package first, then backend
 RUN pnpm --filter @octopus-controller/shared build
 RUN pnpm --filter backend build
 
-# Native modules stage - builds native modules for target ARM64 platform
-# This stage runs under QEMU but with minimal operations
-FROM node:20-alpine AS native-builder
-
-# Install build dependencies for better-sqlite3
-RUN apk add --no-cache python3 make g++
-
-WORKDIR /app
-
-# Copy package files
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY packages/shared/package.json packages/shared/
-COPY apps/backend/package.json apps/backend/
-
-# Use npm instead of pnpm for better QEMU compatibility
-# Install only better-sqlite3 which needs native compilation
-RUN npm install better-sqlite3 --build-from-source
-
-# Production stage - optimized for small memory footprint
-FROM node:20-alpine AS runner
+# Production stage
+FROM node:20-slim AS runner
 
 WORKDIR /app
 
@@ -55,15 +38,12 @@ COPY pnpm-workspace.yaml package.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/backend/package.json apps/backend/
 
-# Copy node_modules from builder (JS dependencies, platform-independent)
+# Copy node_modules from builder
 COPY --from=builder /app/node_modules node_modules
 COPY --from=builder /app/packages/shared/node_modules packages/shared/node_modules
 COPY --from=builder /app/apps/backend/node_modules apps/backend/node_modules
 
-# Overwrite better-sqlite3 with ARM64 version from native-builder
-COPY --from=native-builder /app/node_modules/better-sqlite3 node_modules/better-sqlite3
-
-# Copy built JS files from builder (platform-independent)
+# Copy built JS files from builder
 COPY --from=builder /app/packages/shared/dist packages/shared/dist
 COPY --from=builder /app/apps/backend/dist apps/backend/dist
 

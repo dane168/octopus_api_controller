@@ -17,8 +17,8 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/
 COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/
 
-# Install dependencies - use npm for better-sqlite3 to avoid pnpm QEMU issues
-RUN npm install
+# Install all dependencies including devDependencies for build
+RUN npm install --include=dev
 
 # Copy source files
 COPY packages/shared/src packages/shared/src

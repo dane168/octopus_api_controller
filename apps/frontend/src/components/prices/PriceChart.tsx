@@ -49,12 +49,12 @@ function CustomTooltip({ active, payload }: TooltipProps) {
   const endTime = formatTime(price.validTo);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3">
-      <p className="font-medium text-gray-900">{time} - {endTime}</p>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3">
+      <p className="font-medium text-gray-900 dark:text-gray-100">{time} - {endTime}</p>
       <p className="text-2xl font-bold" style={{ color: getBarColor(price.valueIncVat) }}>
         {price.valueIncVat.toFixed(2)}p/kWh
       </p>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 dark:text-gray-400">
         Ex VAT: {price.valueExcVat.toFixed(2)}p
       </p>
     </div>

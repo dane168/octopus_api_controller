@@ -71,9 +71,9 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
   return (
     <div className="card p-4 mb-4">
       <div className="flex items-center gap-2 mb-4">
-        <Clock className="w-5 h-5 text-blue-600" />
-        <h3 className="font-medium text-gray-900">Daily Schedule Timeline</h3>
-        <span className="text-xs text-gray-500 ml-auto">
+        <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <h3 className="font-medium text-gray-900 dark:text-gray-100">Daily Schedule Timeline</h3>
+        <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
           Now: {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
@@ -82,19 +82,19 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
       <div className="flex flex-wrap gap-4 mb-4 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-3 bg-green-500 rounded-sm" />
-          <span className="text-gray-600">ON</span>
+          <span className="text-gray-600 dark:text-gray-400">ON</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-3 bg-red-500 rounded-sm" />
-          <span className="text-gray-600">OFF</span>
+          <span className="text-gray-600 dark:text-gray-400">OFF</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-3 bg-purple-500 rounded-sm" />
-          <span className="text-gray-600">TOGGLE</span>
+          <span className="text-gray-600 dark:text-gray-400">TOGGLE</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-sm border border-yellow-600" />
-          <span className="text-gray-600">Conflict</span>
+          <span className="text-gray-600 dark:text-gray-400">Conflict</span>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
             {hours.map(hour => (
               <div
                 key={hour}
-                className="absolute text-xs text-gray-500 -translate-x-1/2"
+                className="absolute text-xs text-gray-500 dark:text-gray-400 -translate-x-1/2"
                 style={{ left: `${(hour / 24) * 100}%` }}
               >
                 {formatHour(hour)}
@@ -124,21 +124,21 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
             return (
               <div key={schedule.deviceId} className="flex items-center gap-2">
                 {/* Device name */}
-                <div className={`w-32 flex-shrink-0 flex items-center gap-1.5 pr-2 ${hasConflicts ? 'text-red-600' : 'text-gray-700'}`}>
-                  <Power className={`w-3.5 h-3.5 flex-shrink-0 ${hasConflicts ? 'text-red-500' : 'text-gray-400'}`} />
+                <div className={`w-32 flex-shrink-0 flex items-center gap-1.5 pr-2 ${hasConflicts ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                  <Power className={`w-3.5 h-3.5 flex-shrink-0 ${hasConflicts ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`} />
                   <span className="text-sm font-medium truncate" title={schedule.deviceName}>
                     {schedule.deviceName}
                   </span>
-                  {hasConflicts && <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+                  {hasConflicts && <AlertTriangle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 flex-shrink-0" />}
                 </div>
 
                 {/* Timeline bar - no overflow-hidden so tooltips can show */}
-                <div className="flex-1 relative h-8 bg-gray-100 rounded-lg border border-gray-200">
+                <div className="flex-1 relative h-8 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                   {/* Hour grid lines */}
                   {hours.slice(1, -1).map(hour => (
                     <div
                       key={hour}
-                      className="absolute top-0 bottom-0 w-px bg-gray-200"
+                      className="absolute top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-600"
                       style={{ left: `${(hour / 24) * 100}%` }}
                     />
                   ))}
@@ -201,10 +201,10 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
       </div>
 
       {/* Summary */}
-      <div className="mt-4 pt-3 border-t border-gray-200 text-xs text-gray-500">
+      <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
         Showing {effectiveSchedules.length} device{effectiveSchedules.length !== 1 ? 's' : ''} with active schedules
         {conflicts.length > 0 && (
-          <span className="text-red-600 ml-2">
+          <span className="text-red-600 dark:text-red-400 ml-2">
             ({conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''} detected)
           </span>
         )}

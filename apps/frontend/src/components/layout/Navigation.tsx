@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { Home, TrendingUp, Plug, Calendar, History, Settings, LogOut } from 'lucide-react';
+import { Home, TrendingUp, Plug, Calendar, History, Settings, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Dashboard' },
@@ -13,19 +14,20 @@ const navItems = [
 
 export function Navigation() {
   const { user, logout, authEnabled } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:sticky md:top-0 md:border-t-0 md:border-r md:h-screen md:w-64 md:flex-shrink-0 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:sticky md:top-0 md:border-t-0 md:border-r md:h-screen md:w-64 md:flex-shrink-0 z-50 dark:bg-gray-800 dark:border-gray-700">
       <div className="flex md:flex-col md:p-4 md:h-full md:overflow-y-auto">
         {/* Logo - Desktop only */}
         <div className="hidden md:flex flex-col items-left gap-3 mb-8">
           <div className="md:flex items-center gap-3">
             <img src="/logo.svg" alt="Energy Controller" className="w-10 h-10" />
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Switchopus</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Switchopus</h1>
             </div>
           </div>
-          <p className="text-sm text-gray-500">A smart home device controller powered by Octopus Agile data.</p>  
+          <p className="text-sm text-gray-500 dark:text-gray-400">A smart home device controller powered by Octopus Agile data.</p>
         </div>
 
         {/* Navigation items */}
@@ -37,8 +39,8 @@ export function Navigation() {
                 className={({ isActive }) =>
                   `flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-lg transition-colors ${
                     isActive
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700'
                   }`
                 }
               >
@@ -49,37 +51,50 @@ export function Navigation() {
           ))}
         </ul>
 
-        {/* User section - Desktop only */}
-        {authEnabled && user && (
-          <div className="hidden md:block mt-auto pt-4 border-t border-gray-200">
-            <div className="flex items-center gap-3 px-2 mb-3">
-              {user.picture ? (
-                <img
-                  src={user.picture}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-blue-600">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
+        {/* Theme toggle and User section - Desktop only */}
+        <div className="hidden md:block mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 mb-2"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
+
+          {/* User section */}
+          {authEnabled && user && (
+            <>
+              <div className="flex items-center gap-3 px-2 mb-3">
+                {user.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {user.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                <p className="text-xs text-gray-500 truncate">{user.email}</p>
               </div>
-            </div>
-            <button
-              onClick={logout}
-              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign out
-            </button>
-          </div>
-        )}
+              <button
+                onClick={logout}
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </nav>
   );

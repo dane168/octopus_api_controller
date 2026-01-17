@@ -35,8 +35,8 @@ export function Dashboard() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+          <p className="text-gray-500 dark:text-gray-400">
             {settings?.region
               ? `Region ${settings.region} - Octopus Agile`
               : 'Configure your region in Settings'}
@@ -56,9 +56,9 @@ export function Dashboard() {
 
       {/* Setup prompt */}
       {needsSetup && (
-        <div className="card p-6 bg-blue-50 border-blue-200">
-          <h2 className="font-medium text-blue-900">Welcome!</h2>
-          <p className="text-blue-700 mt-1">
+        <div className="card p-6 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+          <h2 className="font-medium text-blue-900 dark:text-blue-100">Welcome!</h2>
+          <p className="text-blue-700 dark:text-blue-300 mt-1">
             To get started, please configure your electricity region in Settings.
           </p>
           <a href="/settings" className="btn btn-primary mt-4 inline-block">
@@ -76,15 +76,15 @@ export function Dashboard() {
 
       {/* Price chart */}
       <div className="card p-4 md:p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Next 24 Hours</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Next 24 Hours</h2>
         {pricesLoading ? (
           <div className="h-64 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
           </div>
         ) : prices && prices.length > 0 ? (
           <PriceChart prices={prices} currentTime={now} cheapestSlots={cheapestIds} />
         ) : (
-          <div className="h-64 flex items-center justify-center text-gray-500">
+          <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
             No price data available. Try refreshing.
           </div>
         )}
@@ -94,16 +94,16 @@ export function Dashboard() {
       {stats && (
         <div className="grid grid-cols-3 gap-4">
           <div className="card p-4 text-center">
-            <p className="text-sm text-gray-500">Min</p>
-            <p className="text-xl font-bold text-green-600">{stats.min.toFixed(1)}p</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Min</p>
+            <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.min.toFixed(1)}p</p>
           </div>
           <div className="card p-4 text-center">
-            <p className="text-sm text-gray-500">Avg</p>
-            <p className="text-xl font-bold text-gray-900">{stats.avg.toFixed(1)}p</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Avg</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.avg.toFixed(1)}p</p>
           </div>
           <div className="card p-4 text-center">
-            <p className="text-sm text-gray-500">Max</p>
-            <p className="text-xl font-bold text-red-600">{stats.max.toFixed(1)}p</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Max</p>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">{stats.max.toFixed(1)}p</p>
           </div>
         </div>
       )}

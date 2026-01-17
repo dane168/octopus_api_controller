@@ -167,32 +167,32 @@ export function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500">Configure your energy controller</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+        <p className="text-gray-500 dark:text-gray-400">Configure your energy controller</p>
       </div>
 
       {/* Tuya Cloud API Settings */}
       <div className="card p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Cloud className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Tuya Cloud API</h2>
+          <Cloud className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tuya Cloud API</h2>
           {tuyaCredentials?.configured ? (
-            <span className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+            <span className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">
               <Wifi className="w-3 h-3" />
               Connected
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+            <span className="flex items-center gap-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
               <WifiOff className="w-3 h-3" />
               Not configured
             </span>
           )}
         </div>
 
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Connect your Tuya Smart Home account to control your devices.
           You'll need to create an IoT project at{' '}
-          <a href="https://iot.tuya.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+          <a href="https://iot.tuya.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
             iot.tuya.com
           </a>
           {' '}and link your devices.
@@ -226,7 +226,7 @@ export function Settings() {
               placeholder={tuyaCredentials?.configured ? '••••••••' : 'Your Tuya Access Secret'}
             />
             {tuyaCredentials?.configured && tuyaCredentials.accessSecretMasked && !tuyaAccessSecret && (
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 Secret saved: <span className="font-mono">{tuyaCredentials.accessSecretMasked}</span>
               </p>
             )}
@@ -256,13 +256,13 @@ export function Settings() {
                 </>
               )}
             </select>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               Must match your Tuya IoT project's data center region.
             </p>
           </div>
 
           {tuyaTestResult !== null && (
-            <div className={`p-3 rounded-lg ${tuyaTestResult ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            <div className={`p-3 rounded-lg ${tuyaTestResult ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
               {tuyaTestResult ? (
                 <span className="flex items-center gap-2">
                   <Check className="w-4 h-4" />
@@ -317,23 +317,23 @@ export function Settings() {
 
           {/* Space-based Device Import */}
           {tuyaCredentials?.configured && (
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Home className="w-4 h-4 text-gray-600" />
-                  <h3 className="text-sm font-medium text-gray-700">Import Devices from Space</h3>
+                  <Home className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Import Devices from Space</h3>
                 </div>
                 <button
                   onClick={() => refetchSpaces()}
                   disabled={spacesLoading}
-                  className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1"
                 >
                   <RefreshCw className={`w-3 h-3 ${spacesLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
               </div>
 
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                 Select a Tuya space (home) to view and import devices from.
               </p>
 
@@ -366,26 +366,26 @@ export function Settings() {
               {selectedSpaceId && (
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-gray-600">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                       Devices in this space:
                     </span>
                     {devicesLoading && (
-                      <span className="text-xs text-gray-400">Loading...</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">Loading...</span>
                     )}
                   </div>
 
                   {spaceDevices && spaceDevices.length > 0 ? (
-                    <div className="bg-gray-50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-48 overflow-y-auto">
                       <ul className="space-y-1">
                         {spaceDevices.map((device) => (
                           <li key={device.id} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-700">
+                            <span className="text-gray-700 dark:text-gray-300">
                               {device.custom_name || device.name}
                             </span>
                             <span className={`text-xs px-2 py-0.5 rounded ${
                               device.is_online
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-200 text-gray-500'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
                             }`}>
                               {device.is_online ? 'Online' : 'Offline'}
                             </span>
@@ -394,7 +394,7 @@ export function Settings() {
                       </ul>
                     </div>
                   ) : !devicesLoading && (
-                    <p className="text-xs text-gray-400 italic">No devices found in this space.</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No devices found in this space.</p>
                   )}
                 </div>
               )}
@@ -410,7 +410,7 @@ export function Settings() {
               </button>
 
               {importResult && (
-                <p className="text-sm text-green-600 mt-2">
+                <p className="text-sm text-green-600 dark:text-green-400 mt-2">
                   Imported {importResult.imported} devices, skipped {importResult.skipped} existing.
                 </p>
               )}
@@ -421,8 +421,8 @@ export function Settings() {
 
       {/* Octopus Energy Settings */}
       <div className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Octopus Energy Settings</h2>
-        <p className="text-sm text-gray-500 mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Octopus Energy Settings</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Configure your Octopus Energy API credentials and electricity region.
         </p>
 
@@ -445,7 +445,7 @@ export function Settings() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               You can find your region on your electricity bill or by checking your postcode.
             </p>
           </div>
@@ -465,13 +465,13 @@ export function Settings() {
                 autoComplete="off"
               />
               {apiKeyMasked && !octopusApiKey && (
-                <span className="text-xs text-gray-500">(saved)</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">(saved)</span>
               )}
             </div>
             {apiKeyMasked && !octopusApiKey && (
-              <p className="text-xs text-gray-400 mt-1">API key is saved: <span className="font-mono">{apiKeyMasked}</span></p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">API key is saved: <span className="font-mono">{apiKeyMasked}</span></p>
             )}
-            <p className="text-xs text-gray-400 mt-1">Required for consumption data and price endpoints.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Required for consumption data and price endpoints.</p>
           </div>
 
           {/* MPAN */}
@@ -521,16 +521,16 @@ export function Settings() {
       </div>
 
       {/* Info Box */}
-      <div className="card p-6 bg-blue-50 border-blue-200">
+      <div className="card p-6 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
         <div className="flex gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-medium text-blue-900">About Agile Tariff</h3>
-            <p className="text-sm text-blue-700 mt-1">
+            <h3 className="font-medium text-blue-900 dark:text-blue-100">About Agile Tariff</h3>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
               Octopus Energy's Agile tariff prices change every 30 minutes based on wholesale
               electricity prices. New prices are released daily at 4pm for the period 11pm-11pm.
             </p>
-            <ul className="text-sm text-blue-700 mt-2 space-y-1">
+            <ul className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1">
               <li>• Prices can go negative during high renewable generation</li>
               <li>• Prices are capped at 100p/kWh</li>
               <li>• Peak prices typically occur between 4pm-7pm</li>
@@ -541,11 +541,11 @@ export function Settings() {
 
       {/* About */}
       <div className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">About</h2>
-        <p className="text-sm text-gray-500">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">About</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Energy Controller v1.0.0
         </p>
-        <p className="text-sm text-gray-400 mt-1">
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
           Smart home energy management with Octopus Agile tariff integration and Tuya Cloud control.
         </p>
       </div>

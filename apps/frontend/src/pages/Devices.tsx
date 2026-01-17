@@ -32,17 +32,17 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
 
   // Determine icon color based on power state and online status
   const getIconColor = () => {
-    if (!isOnline) return 'text-gray-400';
-    if (powerState === true) return isLight ? 'text-yellow-500' : 'text-green-600';
-    if (powerState === false) return 'text-gray-400';
-    return 'text-green-600'; // Online but unknown power state
+    if (!isOnline) return 'text-gray-400 dark:text-gray-500';
+    if (powerState === true) return isLight ? 'text-yellow-500 dark:text-yellow-400' : 'text-green-600 dark:text-green-400';
+    if (powerState === false) return 'text-gray-400 dark:text-gray-500';
+    return 'text-green-600 dark:text-green-400'; // Online but unknown power state
   };
 
   const getIconBg = () => {
-    if (!isOnline) return 'bg-gray-100';
-    if (powerState === true) return isLight ? 'bg-yellow-100' : 'bg-green-100';
-    if (powerState === false) return 'bg-gray-100';
-    return 'bg-green-100';
+    if (!isOnline) return 'bg-gray-100 dark:bg-gray-700';
+    if (powerState === true) return isLight ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-green-100 dark:bg-green-900/30';
+    if (powerState === false) return 'bg-gray-100 dark:bg-gray-700';
+    return 'bg-green-100 dark:bg-green-900/30';
   };
 
   return (
@@ -53,11 +53,11 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
             <DeviceIcon className={`w-5 h-5 ${getIconColor()}`} />
           </div>
           <div>
-            <h3 className="font-medium text-gray-900">{device.name}</h3>
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">{device.name}</h3>
             <div className="flex items-center gap-2">
-              <p className="text-sm text-gray-500 capitalize">{device.type.replace('_', ' ')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{device.type.replace('_', ' ')}</p>
               {isOnline && powerState !== null && (
-                <span className={`text-xs px-1.5 py-0.5 rounded ${powerState ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded ${powerState ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}>
                   {powerState ? 'ON' : 'OFF'}
                 </span>
               )}
@@ -66,21 +66,21 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
         </div>
         <div className="flex items-center gap-2">
           {isOnline ? (
-            <Wifi className="w-4 h-4 text-green-500" />
+            <Wifi className="w-4 h-4 text-green-500 dark:text-green-400" />
           ) : (
-            <WifiOff className="w-4 h-4 text-gray-400" />
+            <WifiOff className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           )}
           <button
             onClick={onCheckStatus}
             disabled={isCheckingStatus}
-            className="text-gray-400 hover:text-blue-600 disabled:opacity-50"
+            className="text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400 disabled:opacity-50"
             title="Check device status"
           >
             <RefreshCw className={`w-4 h-4 ${isCheckingStatus ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={onEdit}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
             title="Edit device"
           >
             <Edit2 className="w-4 h-4" />
@@ -89,7 +89,7 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
       </div>
 
       {/* Show config summary */}
-      <div className="text-xs text-gray-500 mb-3 font-mono bg-gray-50 p-2 rounded">
+      <div className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded">
         <div className="truncate" title={device.config.deviceId}>ID: {device.config.deviceId?.slice(0, 16)}...</div>
       </div>
 
@@ -98,14 +98,14 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
           <button
             onClick={() => onControl('on')}
             disabled={isControlling}
-            className="btn btn-sm bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+            className="btn btn-sm bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white disabled:opacity-50"
           >
             {isControlling ? <Loader2 className="w-4 h-4 animate-spin" /> : 'On'}
           </button>
           <button
             onClick={() => onControl('off')}
             disabled={isControlling}
-            className="btn btn-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            className="btn btn-sm bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white disabled:opacity-50"
           >
             {isControlling ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Off'}
           </button>
@@ -119,14 +119,14 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
         </div>
         <button
           onClick={onDelete}
-          className="btn btn-sm text-red-600 hover:bg-red-50"
+          className="btn btn-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
         >
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
 
       {device.lastSeen && (
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
           Last seen: {new Date(device.lastSeen).toLocaleString()}
         </p>
       )}
@@ -161,17 +161,17 @@ function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting }: {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Add Device</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+          <h2 className="text-lg font-semibold dark:text-gray-100">Add Device</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Device Name
             </label>
             <input
@@ -185,7 +185,7 @@ function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Device Type
             </label>
             <select
@@ -202,7 +202,7 @@ function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tuya Device ID
             </label>
             <input
@@ -213,12 +213,12 @@ function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting }: {
               className="input w-full font-mono text-sm"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Find this in your Tuya IoT Platform project.
             </p>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-4 border-t dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
@@ -237,8 +237,8 @@ function AddDeviceModal({ isOpen, onClose, onSubmit, isSubmitting }: {
           </div>
         </form>
 
-        <div className="p-4 bg-gray-50 rounded-b-lg">
-          <p className="text-xs text-gray-500">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-b-lg">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             <strong>Tip:</strong> Use the "Import from Tuya Cloud" button to automatically import all your devices.
           </p>
         </div>
@@ -280,17 +280,17 @@ function EditDeviceModal({ device, isOpen, onClose, onSubmit, isSubmitting }: {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Edit Device</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+          <h2 className="text-lg font-semibold dark:text-gray-100">Edit Device</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Device Name
             </label>
             <input
@@ -303,7 +303,7 @@ function EditDeviceModal({ device, isOpen, onClose, onSubmit, isSubmitting }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Device Type
             </label>
             <select
@@ -320,7 +320,7 @@ function EditDeviceModal({ device, isOpen, onClose, onSubmit, isSubmitting }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tuya Device ID
             </label>
             <input
@@ -332,7 +332,7 @@ function EditDeviceModal({ device, isOpen, onClose, onSubmit, isSubmitting }: {
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-4 border-t dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
@@ -470,7 +470,7 @@ export function Devices() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
       </div>
     );
   }
@@ -490,8 +490,8 @@ export function Devices() {
 
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Devices</h1>
-          <p className="text-gray-500">Manage your smart home devices</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Devices</h1>
+          <p className="text-gray-500 dark:text-gray-400">Manage your smart home devices</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -532,7 +532,7 @@ export function Devices() {
 
       {/* Import result notification */}
       {importResult && (
-        <div className={`p-4 rounded-lg ${importResult.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        <div className={`p-4 rounded-lg ${importResult.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
           {importResult.message}
         </div>
       )}
@@ -555,9 +555,9 @@ export function Devices() {
         </div>
       ) : (
         <div className="card p-8 text-center">
-          <Plug className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-lg font-medium text-gray-900 mb-2">No Devices Yet</h2>
-          <p className="text-gray-500 max-w-md mx-auto mb-4">
+          <Plug className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Devices Yet</h2>
+          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
             Add your Tuya smart devices to control them based on electricity prices.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
@@ -581,10 +581,10 @@ export function Devices() {
               Add Manually
             </button>
           </div>
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg text-left">
-            <h3 className="font-medium text-gray-900 mb-2">What you'll need:</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>1. Create a Tuya IoT Platform developer account at <a href="https://iot.tuya.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">iot.tuya.com</a></li>
+          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg text-left">
+            <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">What you'll need:</h3>
+            <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+              <li>1. Create a Tuya IoT Platform developer account at <a href="https://iot.tuya.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">iot.tuya.com</a></li>
               <li>2. Create a Cloud project and link your Tuya/Smart Life app</li>
               <li>3. Add your Tuya credentials in Settings</li>
               <li>4. Click "Import from Tuya Cloud" to import all your devices</li>
@@ -609,19 +609,19 @@ export function Devices() {
       />
 
       {createMutation.isError && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg">
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/50 dark:border-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
           {createMutation.error.message}
         </div>
       )}
 
       {controlMutation.isError && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg">
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/50 dark:border-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
           {controlMutation.error.message}
         </div>
       )}
 
       {updateMutation.isError && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg">
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/50 dark:border-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
           {updateMutation.error.message}
         </div>
       )}

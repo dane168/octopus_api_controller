@@ -32,17 +32,17 @@ export function Login() {
 
   if (!authEnabled || !googleClientId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
         <div className="max-w-md w-full text-center">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-              <Zap className="w-8 h-8 text-blue-600" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
+              <Zap className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Energy Controller</h1>
-            <p className="text-gray-500 mt-2">Authentication not configured</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Energy Controller</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">Authentication not configured</p>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-sm text-yellow-800">
+          <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
               Google OAuth is not configured. Please set GOOGLE_CLIENT_ID in your environment variables.
             </p>
           </div>
@@ -52,30 +52,30 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Zap className="w-8 h-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
+            <Zap className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Energy Controller</h1>
-          <p className="text-gray-500 mt-2">Octopus Agile Smart Home Automation</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Energy Controller</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Octopus Agile Smart Home Automation</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6 text-center">
             Sign in to continue
           </h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
           <div className="flex justify-center">
             {isLoggingIn ? (
-              <div className="flex items-center gap-2 text-gray-500">
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span>Signing in...</span>
               </div>
@@ -92,7 +92,7 @@ export function Login() {
           </div>
         </div>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
           Your devices, schedules, and settings will be saved to your account.
         </p>
       </div>

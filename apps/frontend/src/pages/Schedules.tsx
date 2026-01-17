@@ -68,10 +68,10 @@ function ScheduleCard({
     <div className={`card p-4 ${!schedule.enabled ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <h3 className="font-medium text-gray-900">{schedule.name}</h3>
+          <h3 className="font-medium text-gray-900 dark:text-gray-100">{schedule.name}</h3>
           <div className="flex flex-wrap gap-1 mt-1">
             {schedule.devices.map((d) => (
-              <span key={d.id} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+              <span key={d.id} className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded">
                 {d.name}
               </span>
             ))}
@@ -80,14 +80,14 @@ function ScheduleCard({
         <div className="flex items-center gap-1">
           <button
             onClick={onViewLogs}
-            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
             title="View execution logs"
           >
             <History className="w-4 h-4" />
           </button>
           <button
             onClick={onEdit}
-            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
             title="Edit schedule"
           >
             <Pencil className="w-4 h-4" />
@@ -95,7 +95,7 @@ function ScheduleCard({
           <button
             onClick={onToggle}
             disabled={isToggling}
-            className={`p-1.5 rounded ${schedule.enabled ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-100'}`}
+            className={`p-1.5 rounded ${schedule.enabled ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
             title={schedule.enabled ? 'Disable schedule' : 'Enable schedule'}
           >
             {isToggling ? (
@@ -109,7 +109,7 @@ function ScheduleCard({
           <button
             onClick={onDelete}
             disabled={isDeleting}
-            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+            className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
             title="Delete schedule"
           >
             {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -122,21 +122,21 @@ function ScheduleCard({
         <span
           className={`text-xs font-medium px-2 py-1 rounded ${
             config.action === 'on'
-              ? 'bg-green-100 text-green-700'
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
               : config.action === 'off'
-              ? 'bg-red-100 text-red-700'
-              : 'bg-purple-100 text-purple-700'
+              ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+              : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
           }`}
         >
           {config.action.toUpperCase()}
         </span>
-        <span className="text-xs text-gray-500">{config.repeat === 'daily' ? 'Daily' : 'One-time'}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{config.repeat === 'daily' ? 'Daily' : 'One-time'}</span>
       </div>
 
       {/* Time slots */}
       <div className="flex flex-wrap gap-1">
         {config.slots.map((slot, idx) => (
-          <span key={idx} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded flex items-center gap-1">
+          <span key={idx} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {formatSlotTime(slot)}
           </span>
@@ -164,13 +164,13 @@ function ScheduleLogsModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
           <div>
-            <h2 className="text-lg font-semibold">Execution Logs</h2>
-            <p className="text-sm text-gray-500">{schedule.name}</p>
+            <h2 className="text-lg font-semibold dark:text-gray-100">Execution Logs</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{schedule.name}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -183,9 +183,9 @@ function ScheduleLogsModal({
           ) : logs && logs.length > 0 ? (
             <div className="divide-y">
               {logs.map((log) => (
-                <div key={log.id} className="p-3 hover:bg-gray-50">
+                <div key={log.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700">
                   <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 ${log.success ? 'text-green-500' : 'text-red-500'}`}>
+                    <div className={`mt-0.5 ${log.success ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                       {log.success ? (
                         <CheckCircle className="w-5 h-5" />
                       ) : (
@@ -194,29 +194,29 @@ function ScheduleLogsModal({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-gray-900 text-sm">
+                        <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">
                           {deviceNames.get(log.deviceId) || log.deviceId.slice(0, 8)}
                         </span>
                         <span
                           className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                             log.action === 'on'
-                              ? 'bg-green-100 text-green-700'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                               : log.action === 'off'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-purple-100 text-purple-700'
+                              ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                              : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
                           }`}
                         >
                           {log.action.toUpperCase()}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{log.triggerReason}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{log.triggerReason}</p>
                       {!log.success && log.errorMessage && (
-                        <p className="text-xs text-red-600 mt-1 bg-red-50 p-1.5 rounded">
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1 bg-red-50 dark:bg-red-900/30 p-1.5 rounded">
                           {log.errorMessage}
                         </p>
                       )}
                     </div>
-                    <div className="text-xs text-gray-400 whitespace-nowrap">
+                    <div className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                       {formatLogTime(log.executedAt)}
                     </div>
                   </div>
@@ -224,15 +224,15 @@ function ScheduleLogsModal({
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-              <History className="w-10 h-10 text-gray-300 mb-2" />
+            <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+              <History className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-2" />
               <p className="font-medium">No logs yet</p>
               <p className="text-sm">Logs will appear here when the schedule runs</p>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t bg-gray-50">
+        <div className="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
           <button onClick={onClose} className="btn btn-secondary w-full">
             Close
           </button>
@@ -274,13 +274,13 @@ function TimeSlotSelector({
             disabled={isPast}
             className={`
               p-2 rounded-lg border text-left transition-all
-              ${isPast ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'hover:border-blue-400'}
-              ${isSelected ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-gray-200'}
+              ${isPast ? 'opacity-40 cursor-not-allowed bg-gray-50 dark:bg-gray-700' : 'hover:border-blue-400'}
+              ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'}
               ${isCurrent && !isSelected ? 'border-blue-300' : ''}
             `}
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-gray-700">
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 {formatTime(price.validFrom)}
               </span>
               {isCurrent && (
@@ -318,15 +318,15 @@ function DeviceSelector({
             onClick={() => onToggleDevice(device.id)}
             className={`
               p-3 rounded-lg border text-left transition-all flex items-center gap-3
-              ${isSelected ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-400'}
+              ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'}
             `}
           >
-            <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-100' : 'bg-gray-100'}`}>
-              <Power className={`w-4 h-4 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`} />
+            <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              <Power className={`w-4 h-4 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 truncate">{device.name}</div>
-              <div className="text-xs text-gray-500 capitalize">{device.type.replace('_', ' ')}</div>
+              <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{device.name}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{device.type.replace('_', ' ')}</div>
             </div>
             {isSelected && (
               <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
@@ -450,36 +450,36 @@ function ScheduleModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
           <div>
-            <h2 className="text-lg font-semibold">{isEditMode ? 'Edit Schedule' : 'Create Schedule'}</h2>
-            <p className="text-sm text-gray-500">Step {step} of 3</p>
+            <h2 className="text-lg font-semibold dark:text-gray-100">{isEditMode ? 'Edit Schedule' : 'Create Schedule'}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Step {step} of 3</p>
           </div>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={handleClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Progress indicator */}
-        <div className="flex border-b">
+        <div className="flex border-b dark:border-gray-700">
           <button
             onClick={() => setStep(1)}
-            className={`flex-1 py-2 text-sm font-medium ${step === 1 ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+            className={`flex-1 py-2 text-sm font-medium ${step === 1 ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
           >
             Devices
           </button>
           <button
             onClick={() => canProceedStep1 && setStep(2)}
             disabled={!canProceedStep1}
-            className={`flex-1 py-2 text-sm font-medium ${step === 2 ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'} disabled:opacity-50`}
+            className={`flex-1 py-2 text-sm font-medium ${step === 2 ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'} disabled:opacity-50`}
           >
             Time Slots
           </button>
           <button
             onClick={() => canProceedStep1 && canProceedStep2 && setStep(3)}
             disabled={!canProceedStep1 || !canProceedStep2}
-            className={`flex-1 py-2 text-sm font-medium ${step === 3 ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'} disabled:opacity-50`}
+            className={`flex-1 py-2 text-sm font-medium ${step === 3 ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'} disabled:opacity-50`}
           >
             Settings
           </button>
@@ -489,7 +489,7 @@ function ScheduleModal({
           {/* Step 1: Select Devices */}
           {step === 1 && (
             <div className="p-4">
-              <p className="text-sm text-gray-600 mb-3">Select one or more devices to control:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Select one or more devices to control:</p>
               {devices.length > 0 ? (
                 <DeviceSelector
                   devices={devices}
@@ -497,7 +497,7 @@ function ScheduleModal({
                   onToggleDevice={handleToggleDevice}
                 />
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   No devices configured. Add devices first.
                 </div>
               )}
@@ -507,7 +507,7 @@ function ScheduleModal({
           {/* Step 2: Select Time Slots */}
           {step === 2 && (
             <div className="p-4">
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Select time windows (can select multiple, non-consecutive):
               </p>
               {prices.length > 0 ? (
@@ -517,7 +517,7 @@ function ScheduleModal({
                   onToggleSlot={handleToggleSlot}
                 />
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   No price data available. Refresh prices first.
                 </div>
               )}
@@ -528,7 +528,7 @@ function ScheduleModal({
           {step === 3 && (
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Action</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['on', 'off', 'toggle'] as const).map((a) => (
                     <button
@@ -538,18 +538,18 @@ function ScheduleModal({
                       className={`py-3 px-4 rounded-lg border font-medium transition-all ${
                         action === a
                           ? a === 'on'
-                            ? 'border-green-500 bg-green-50 text-green-700 ring-2 ring-green-200'
+                            ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 ring-2 ring-green-200 dark:ring-green-800'
                             : a === 'off'
-                            ? 'border-red-500 bg-red-50 text-red-700 ring-2 ring-red-200'
-                            : 'border-purple-500 bg-purple-50 text-purple-700 ring-2 ring-purple-200'
-                          : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 ring-2 ring-red-200 dark:ring-red-800'
+                            : 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 ring-2 ring-purple-200 dark:ring-purple-800'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                       }`}
                     >
                       {a.toUpperCase()}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   {action === 'on' && 'Turn devices ON at slot start, OFF at slot end'}
                   {action === 'off' && 'Turn devices OFF at slot start'}
                   {action === 'toggle' && 'Toggle device state at slot start'}
@@ -557,15 +557,15 @@ function ScheduleModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Repeat</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Repeat</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setRepeat('daily')}
                     className={`py-2 px-4 rounded-lg border font-medium transition-all ${
                       repeat === 'daily'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-200'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 ring-2 ring-blue-200 dark:ring-blue-800'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                   >
                     Daily
@@ -575,8 +575,8 @@ function ScheduleModal({
                     onClick={() => setRepeat('once')}
                     className={`py-2 px-4 rounded-lg border font-medium transition-all ${
                       repeat === 'once'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-200'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 ring-2 ring-blue-200 dark:ring-blue-800'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                   >
                     One-time
@@ -585,7 +585,7 @@ function ScheduleModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Schedule Name
                 </label>
                 <input
@@ -599,9 +599,9 @@ function ScheduleModal({
               </div>
 
               {/* Summary */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Summary</h4>
-                <div className="text-sm text-gray-600 space-y-1">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Summary</h4>
+                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                   <div>
                     <span className="font-medium">Devices:</span>{' '}
                     {selectedDevices.size} selected
@@ -612,7 +612,7 @@ function ScheduleModal({
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {Array.from(selectedSlots.values()).map((slot, idx) => (
-                      <span key={idx} className="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                      <span key={idx} className="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded">
                         {formatSlotTime(slot)}
                       </span>
                     ))}
@@ -624,7 +624,7 @@ function ScheduleModal({
         </form>
 
         {/* Footer */}
-        <div className="flex justify-between gap-2 p-4 border-t bg-gray-50">
+        <div className="flex justify-between gap-2 p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
           {step > 1 ? (
             <button
               type="button"
@@ -667,24 +667,24 @@ function ScheduleModal({
 
 function EffectiveSlotCard({ slot }: { slot: EffectiveSlot }) {
   return (
-    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+    <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
       <div className="flex items-center gap-1.5">
-        <Clock className="w-3.5 h-3.5 text-gray-400" />
-        <span className="text-sm font-medium">{slot.start} - {slot.end}</span>
+        <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+        <span className="text-sm font-medium dark:text-gray-100">{slot.start} - {slot.end}</span>
       </div>
       <span
         className={`text-xs font-medium px-2 py-0.5 rounded ${
           slot.action === 'on'
-            ? 'bg-green-100 text-green-700'
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
             : slot.action === 'off'
-            ? 'bg-red-100 text-red-700'
-            : 'bg-purple-100 text-purple-700'
+            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+            : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
         }`}
       >
         {slot.action.toUpperCase()}
       </span>
       {slot.sourceSchedules.length > 1 && (
-        <span className="text-xs text-gray-500 flex items-center gap-1">
+        <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
           <Layers className="w-3 h-3" />
           {slot.sourceSchedules.length} merged
         </span>
@@ -704,19 +704,19 @@ function DeviceEffectiveScheduleCard({
   const hasConflicts = deviceConflicts.length > 0;
 
   return (
-    <div className={`card p-4 ${hasConflicts ? 'border-red-300 bg-red-50/30' : ''}`}>
+    <div className={`card p-4 ${hasConflicts ? 'border-red-300 dark:border-red-700 bg-red-50/30 dark:bg-red-900/20' : ''}`}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className={`p-2 rounded-lg ${hasConflicts ? 'bg-red-100' : 'bg-blue-100'}`}>
-            <Power className={`w-4 h-4 ${hasConflicts ? 'text-red-600' : 'text-blue-600'}`} />
+          <div className={`p-2 rounded-lg ${hasConflicts ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
+            <Power className={`w-4 h-4 ${hasConflicts ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`} />
           </div>
           <div>
-            <h3 className="font-medium text-gray-900">{schedule.deviceName}</h3>
-            <p className="text-xs text-gray-500">{schedule.slots.length} effective slot{schedule.slots.length !== 1 ? 's' : ''}</p>
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">{schedule.deviceName}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{schedule.slots.length} effective slot{schedule.slots.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
         {hasConflicts && (
-          <div className="flex items-center gap-1 text-red-600">
+          <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
             <AlertTriangle className="w-4 h-4" />
             <span className="text-xs font-medium">Conflict</span>
           </div>
@@ -732,10 +732,10 @@ function DeviceEffectiveScheduleCard({
 
       {/* Conflict details */}
       {hasConflicts && (
-        <div className="mt-3 p-2 bg-red-100 rounded-lg">
-          <p className="text-xs font-medium text-red-700 mb-1">Schedule Conflicts:</p>
+        <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+          <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Schedule Conflicts:</p>
           {deviceConflicts.map((conflict, idx) => (
-            <div key={idx} className="text-xs text-red-600">
+            <div key={idx} className="text-xs text-red-600 dark:text-red-400">
               {conflict.timeSlot.start}-{conflict.timeSlot.end}:{' '}
               {conflict.conflictingActions.map((a) => `${a.scheduleName} (${a.action})`).join(' vs ')}
             </div>
@@ -744,12 +744,12 @@ function DeviceEffectiveScheduleCard({
       )}
 
       {/* Source schedules */}
-      <div className="mt-3 pt-3 border-t border-gray-200">
-        <p className="text-xs text-gray-500 mb-1">Contributing schedules:</p>
+      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Contributing schedules:</p>
         <div className="flex flex-wrap gap-1">
           {[...new Set(schedule.slots.flatMap((s) => s.sourceSchedules.map((ss) => ss.name)))].map(
             (name) => (
-              <span key={name} className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+              <span key={name} className="text-xs bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
                 {name}
               </span>
             )
@@ -780,9 +780,9 @@ function EffectiveSchedulesView({
   if (effectiveSchedules.length === 0) {
     return (
       <div className="card p-8 text-center">
-        <Layers className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h2 className="text-lg font-medium text-gray-900 mb-2">No Active Schedules</h2>
-        <p className="text-gray-500 max-w-md mx-auto">
+        <Layers className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Active Schedules</h2>
+        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
           Enable some schedules to see the effective schedule per device here.
         </p>
       </div>
@@ -799,11 +799,11 @@ function EffectiveSchedulesView({
 
       {/* Conflict summary banner */}
       {conflicts.length > 0 && (
-        <div className="bg-red-100 border border-red-300 rounded-lg p-4 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-medium text-red-800">Schedule Conflicts Detected</h3>
-            <p className="text-sm text-red-700 mt-1">
+            <h3 className="font-medium text-red-800 dark:text-red-300">Schedule Conflicts Detected</h3>
+            <p className="text-sm text-red-700 dark:text-red-400 mt-1">
               {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''} found. Some devices have
               overlapping schedules with different actions. Review the affected devices below.
             </p>
@@ -922,8 +922,8 @@ export function Schedules() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Schedules</h1>
-          <p className="text-gray-500">Automate devices based on time slots</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Schedules</h1>
+          <p className="text-gray-500 dark:text-gray-400">Automate devices based on time slots</p>
         </div>
         {activeTab === 'schedules' && (
           <button
@@ -938,13 +938,13 @@ export function Schedules() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab('schedules')}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             activeTab === 'schedules'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
           }`}
         >
           <span className="flex items-center gap-2">
@@ -956,8 +956,8 @@ export function Schedules() {
           onClick={() => setActiveTab('effective')}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             activeTab === 'effective'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
           }`}
         >
           <span className="flex items-center gap-2">
@@ -975,7 +975,7 @@ export function Schedules() {
       {activeTab === 'schedules' ? (
         <>
           {!hasDevices && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
+            <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-4 text-amber-800 dark:text-amber-300">
               <p className="font-medium">No devices configured</p>
               <p className="text-sm">Add devices first before creating schedules.</p>
             </div>
@@ -998,9 +998,9 @@ export function Schedules() {
             </div>
           ) : hasDevices ? (
             <div className="card p-8 text-center">
-              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-lg font-medium text-gray-900 mb-2">No Schedules Yet</h2>
-              <p className="text-gray-500 max-w-md mx-auto mb-4">
+              <Calendar className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Schedules Yet</h2>
+              <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
                 Create schedules to automatically control your devices during specific time windows.
               </p>
               <button
@@ -1010,12 +1010,12 @@ export function Schedules() {
                 <Plus className="w-4 h-4" />
                 Create Your First Schedule
               </button>
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg text-left">
-                <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg text-left">
+                <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
                   <Zap className="w-4 h-4 text-yellow-500" />
                   How it works:
                 </h3>
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
                   <li>1. Select one or more devices to control</li>
                   <li>2. Pick time windows (can be non-consecutive)</li>
                   <li>3. Choose action: ON, OFF, or Toggle</li>
@@ -1050,7 +1050,7 @@ export function Schedules() {
       />
 
       {(createMutation.isError || updateMutation.isError) && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg">
+        <div className="fixed bottom-4 right-4 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
           {createMutation.error?.message || updateMutation.error?.message}
         </div>
       )}

@@ -100,25 +100,20 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
 
       {/* Timeline container */}
       <div className="relative">
-        {/* Hour labels */}
-        <div className="flex mb-1 ml-32 relative h-5">
-          {hours.map(hour => (
-            <div
-              key={hour}
-              className="absolute text-xs text-gray-500 -translate-x-1/2"
-              style={{ left: `${(hour / 24) * 100}%` }}
-            >
-              {formatHour(hour)}
-            </div>
-          ))}
-        </div>
-
-        {/* Current time indicator (vertical line spanning all rows) */}
-        <div
-          className="absolute top-5 bottom-0 w-0.5 bg-blue-500 z-20 pointer-events-none"
-          style={{ left: `calc(8rem + ${currentTimePercent}% * (100% - 8rem) / 100)` }}
-        >
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full" />
+        {/* Hour labels - aligned with timeline bars */}
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-32 flex-shrink-0" /> {/* Spacer for device name column */}
+          <div className="flex-1 relative h-5">
+            {hours.map(hour => (
+              <div
+                key={hour}
+                className="absolute text-xs text-gray-500 -translate-x-1/2"
+                style={{ left: `${(hour / 24) * 100}%` }}
+              >
+                {formatHour(hour)}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Device rows */}
@@ -137,8 +132,8 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
                   {hasConflicts && <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
                 </div>
 
-                {/* Timeline bar */}
-                <div className="flex-1 relative h-8 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                {/* Timeline bar - no overflow-hidden so tooltips can show */}
+                <div className="flex-1 relative h-8 bg-gray-100 rounded-lg border border-gray-200">
                   {/* Hour grid lines */}
                   {hours.slice(1, -1).map(hour => (
                     <div
@@ -147,6 +142,12 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
                       style={{ left: `${(hour / 24) * 100}%` }}
                     />
                   ))}
+
+                  {/* Current time indicator per row */}
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10 pointer-events-none"
+                    style={{ left: `${currentTimePercent}%` }}
+                  />
 
                   {/* Schedule slots */}
                   {schedule.slots.map((slot, idx) => {
@@ -168,16 +169,16 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
                     return (
                       <div
                         key={idx}
-                        className={`absolute top-1 bottom-1 rounded ${colorClass} cursor-pointer hover:opacity-80 transition-opacity group`}
+                        className={`absolute top-1 bottom-1 rounded ${colorClass} cursor-pointer hover:opacity-80 transition-opacity group z-0`}
                         style={{
                           left: `${startPercent}%`,
                           width: `${Math.max(widthPercent, 0.5)}%`, // Min width for visibility
                         }}
                         title={`${slot.start} - ${slot.end}: ${slot.action.toUpperCase()}${slot.sourceSchedules.length > 1 ? ` (${slot.sourceSchedules.length} schedules merged)` : ''}`}
                       >
-                        {/* Tooltip on hover */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-30 pointer-events-none">
-                          <div className="bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
+                        {/* Tooltip on hover - positioned above with high z-index */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 pointer-events-none">
+                          <div className="bg-gray-900 text-white text-xs rounded px-2 py-1.5 whitespace-nowrap shadow-lg">
                             <div className="font-medium">{slot.start} - {slot.end}</div>
                             <div className={`${slot.action === 'on' ? 'text-green-300' : slot.action === 'off' ? 'text-red-300' : 'text-purple-300'}`}>
                               {slot.action.toUpperCase()}

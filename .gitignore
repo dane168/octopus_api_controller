@@ -47,6 +47,7 @@ temp/
 .venv_win
 
 .claude
+.claude/*
 
 # Sensitive data exports - never commit
 devices_tuya_export.json

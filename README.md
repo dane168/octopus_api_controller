@@ -51,24 +51,17 @@ Responsive interface works beautifully on phone, tablet, and desktop. Dark mode 
 ### Dashboard
 The main dashboard shows current price, next price, and a 24-hour price chart with statistics.
 
-<!--
 ![Dashboard](docs/images/dashboard.png)
-![Dashboard Dark Mode](docs/images/dashboard-dark.png)
--->
 
 ### Devices
 Manage and control your smart devices. View status, toggle power, and configure settings.
 
-<!--
 ![Devices](docs/images/devices.png)
--->
 
 ### Schedules
 Create automated schedules based on price thresholds or specific time slots.
 
-<!--
 ![Schedules](docs/images/schedules.png)
--->
 
 ---
 

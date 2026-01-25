@@ -269,6 +269,7 @@ function TimeSlotSelector({
 
         return (
           <button
+            type="button"
             key={price.validFrom}
             onClick={() => !isPast && onToggleSlot(slotKey, slot)}
             disabled={isPast}
@@ -314,6 +315,7 @@ function DeviceSelector({
 
         return (
           <button
+            type="button"
             key={device.id}
             onClick={() => onToggleDevice(device.id)}
             className={`
@@ -456,7 +458,7 @@ function ScheduleModal({
             <h2 className="text-lg font-semibold dark:text-gray-100">{isEditMode ? 'Edit Schedule' : 'Create Schedule'}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">Step {step} of 3</p>
           </div>
-          <button onClick={handleClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
+          <button type="button" onClick={handleClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -464,12 +466,14 @@ function ScheduleModal({
         {/* Progress indicator */}
         <div className="flex border-b dark:border-gray-700">
           <button
+            type="button"
             onClick={() => setStep(1)}
             className={`flex-1 py-2 text-sm font-medium ${step === 1 ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
           >
             Devices
           </button>
           <button
+            type="button"
             onClick={() => canProceedStep1 && setStep(2)}
             disabled={!canProceedStep1}
             className={`flex-1 py-2 text-sm font-medium ${step === 2 ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'} disabled:opacity-50`}
@@ -477,6 +481,7 @@ function ScheduleModal({
             Time Slots
           </button>
           <button
+            type="button"
             onClick={() => canProceedStep1 && canProceedStep2 && setStep(3)}
             disabled={!canProceedStep1 || !canProceedStep2}
             className={`flex-1 py-2 text-sm font-medium ${step === 3 ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'} disabled:opacity-50`}

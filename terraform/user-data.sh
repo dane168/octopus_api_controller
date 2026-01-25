@@ -18,6 +18,11 @@ CUSTOM_DOMAIN="${custom_domain}"
 # Update system
 dnf update -y
 
+# Install SSM Agent (required for AWS Systems Manager)
+dnf install -y amazon-ssm-agent
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
+
 # Install Docker
 dnf install -y docker
 

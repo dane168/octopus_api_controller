@@ -1,7 +1,7 @@
-variable "aws_region" {
-  description = "AWS region to deploy to"
+variable "hcloud_token" {
+  description = "Hetzner Cloud API token"
   type        = string
-  default     = "us-east-1"
+  sensitive   = true
 }
 
 variable "environment" {
@@ -10,58 +10,37 @@ variable "environment" {
   default     = "production"
 }
 
-variable "instance_type" {
-  description = "EC2 instance type (t4g = ARM/Graviton)"
+variable "location" {
+  description = "Hetzner datacenter location (nbg1=Nuremberg, fsn1=Falkenstein, hel1=Helsinki)"
   type        = string
-  default     = "t4g.small" # 2 vCPU, 2 GB RAM - FREE TIER until Dec 2026 (750 hrs/month)
-  # Alternative: "t4g.nano" = 2 vCPU, 0.5 GB RAM (~$3/month) - smallest paid option
+  default     = "nbg1"
 }
 
-variable "key_pair_name" {
-  description = "Name of an existing EC2 key pair for SSH access (optional, leave empty to skip)"
+variable "server_type" {
+  description = "Hetzner server type (cx22 = 2 vCPU AMD, 4GB RAM, 40GB SSD)"
   type        = string
-  default     = ""
+  default     = "cx22"
 }
 
-variable "allowed_ssh_cidrs" {
-  description = "CIDR blocks allowed to SSH into the instance (set to your IP for security)"
-  type        = list(string)
-  default     = [] # Empty = no SSH access, set to ["your.ip.address/32"] to enable
-}
-
-variable "ebs_volume_size" {
-  description = "Size of the EBS volume for persistent data (GB)"
+variable "volume_size" {
+  description = "Size of persistent volume for SQLite database (GB)"
   type        = number
-  default     = 30
+  default     = 10
 }
 
-# Application environment variables
-variable "google_client_id" {
-  description = "Google OAuth Client ID"
+variable "ssh_public_key" {
+  description = "SSH public key for server access and CI/CD deployment"
   type        = string
-  sensitive   = true
-}
-
-variable "jwt_secret" {
-  description = "JWT signing secret (generate with: openssl rand -hex 32)"
-  type        = string
-  sensitive   = true
-}
-
-variable "encryption_key" {
-  description = "Encryption key for Tuya credentials (generate with: openssl rand -hex 32)"
-  type        = string
-  sensitive   = true
-}
-
-variable "log_level" {
-  description = "Application log level"
-  type        = string
-  default     = "info"
 }
 
 variable "custom_domain" {
-  description = "Custom domain for the application (e.g., switchopus.com). Leave empty to use nip.io"
+  description = "Custom domain for the application (e.g., switchopus.com)"
   type        = string
   default     = "switchopus.com"
+}
+
+variable "ghcr_owner" {
+  description = "GitHub username/org for GHCR image paths"
+  type        = string
+  default     = "dane168"
 }

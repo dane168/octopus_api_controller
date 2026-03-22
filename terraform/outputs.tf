@@ -1,66 +1,30 @@
-output "instance_id" {
-  description = "EC2 instance ID"
-  value       = aws_instance.app.id
+output "server_ip" {
+  description = "Server public IPv4 address"
+  value       = hcloud_server.app.ipv4_address
 }
 
-output "public_ip" {
-  description = "Public IP address (Elastic IP)"
-  value       = aws_eip.app.public_ip
-}
-
-output "public_dns" {
-  description = "Public DNS name"
-  value       = aws_eip.app.public_dns
+output "server_status" {
+  description = "Server status"
+  value       = hcloud_server.app.status
 }
 
 output "app_url" {
   description = "Application URL"
-  value       = "http://${aws_eip.app.public_ip}"
+  value       = "http://${hcloud_server.app.ipv4_address}"
 }
 
 output "ssh_command" {
-  description = "SSH command (if SSH is enabled)"
-  value       = var.key_pair_name != "" ? "ssh -i ~/.ssh/${var.key_pair_name}.pem ec2-user@${aws_eip.app.public_ip}" : "SSH not enabled (no key pair specified)"
+  description = "SSH command to connect to server"
+  value       = "ssh root@${hcloud_server.app.ipv4_address}"
 }
 
-output "ssm_command" {
-  description = "SSM Session Manager command (no SSH needed)"
-  value       = "aws ssm start-session --target ${aws_instance.app.id}"
+output "volume_id" {
+  description = "Persistent data volume ID"
+  value       = hcloud_volume.data.id
 }
 
-output "instance_type" {
-  description = "EC2 instance type"
-  value       = var.instance_type
-}
-
-output "ami_id" {
-  description = "AMI ID used"
-  value       = data.aws_ami.amazon_linux_arm.id
-}
-
-output "ebs_volume_id" {
-  description = "EBS data volume ID"
-  value       = aws_ebs_volume.data.id
-}
-
-output "nip_io_url" {
-  description = "nip.io URL for Google OAuth (auto-generated from public IP)"
-  value       = "http://${replace(aws_eip.app.public_ip, ".", "-")}.nip.io"
-}
-
-output "ecr_backend_url" {
-  description = "ECR Backend repository URL"
-  value       = aws_ecr_repository.backend.repository_url
-}
-
-output "ecr_frontend_url" {
-  description = "ECR Frontend repository URL"
-  value       = aws_ecr_repository.frontend.repository_url
-}
-
-# GitHub Secrets Summary
 output "github_secrets_needed" {
-  description = "GitHub Actions secrets you need to configure"
+  description = "GitHub Actions secrets to configure"
   value       = <<-EOT
 
     ============================================
@@ -68,16 +32,12 @@ output "github_secrets_needed" {
     Settings > Secrets and variables > Actions
     ============================================
 
-    AWS_ACCESS_KEY_ID     = (your AWS access key)
-    AWS_SECRET_ACCESS_KEY = (your AWS secret key)
-    EC2_INSTANCE_ID       = ${aws_instance.app.id}
-    ECR_BACKEND_URL       = ${aws_ecr_repository.backend.repository_url}
-    ECR_FRONTEND_URL      = ${aws_ecr_repository.frontend.repository_url}
-
-    ============================================
-
-    Add this URL to Google OAuth Console:
-    ${replace(aws_eip.app.public_ip, ".", "-")}.nip.io
+    HETZNER_SSH_PRIVATE_KEY = (private key matching your deploy key)
+    SERVER_IP               = ${hcloud_server.app.ipv4_address}
+    GOOGLE_CLIENT_ID        = (your Google OAuth Client ID)
+    JWT_SECRET              = (generate with: openssl rand -hex 32)
+    ENCRYPTION_KEY          = (generate with: openssl rand -hex 32)
+    FRONTEND_URL            = https://${var.custom_domain}
 
     ============================================
   EOT

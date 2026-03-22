@@ -2,47 +2,19 @@ terraform {
   required_version = ">= 1.0"
 
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
+    hcloud = {
+      source  = "hetznercloud/hcloud"
+      version = "~> 1.45"
     }
   }
 }
 
-provider "aws" {
-  region = var.aws_region
-
-  default_tags {
-    tags = {
-      Project     = "octopus-controller"
-      Environment = var.environment
-      ManagedBy   = "terraform"
-    }
-  }
+provider "hcloud" {
+  token = var.hcloud_token
 }
 
-# Data source to get the latest Amazon Linux 2023 ARM64 AMI
-data "aws_ami" "amazon_linux_arm" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-arm64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = ["arm64"]
-  }
-}
-
-# Get available AZs
-data "aws_availability_zones" "available" {
-  state = "available"
+# SSH key for server access and CI/CD deployment
+resource "hcloud_ssh_key" "deploy" {
+  name       = "octopus-controller-deploy"
+  public_key = var.ssh_public_key
 }

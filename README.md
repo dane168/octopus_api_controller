@@ -97,6 +97,6 @@ Open http://localhost:5173, go to **Settings**, select your electricity region a
 | Frontend | React, Vite, TypeScript, Tailwind CSS, Recharts |
 | Backend | Node.js, Express, TypeScript, Drizzle ORM |
 | Database | SQLite |
-| Infrastructure | Docker, Terraform (AWS) |
+| Infrastructure | Docker, Terraform (Hetzner Cloud) |
 
 ---

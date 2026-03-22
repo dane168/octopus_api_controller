@@ -1,49 +1,52 @@
-# Octopus Controller - AWS EC2 Deployment
+# Octopus Controller - Hetzner Cloud Deployment
 
-Deploy the Octopus Controller to AWS EC2 using Terraform. Uses ARM/Graviton instances and ECR for container storage.
+Deploy the Octopus Controller to Hetzner Cloud using Terraform. Uses GHCR for container storage and SSH for deployment.
 
 ## Cost
 
 | Resource | Monthly Cost |
 |----------|--------------|
-| **t4g.small** (2 vCPU, 2 GB) | **FREE** until Dec 2026 |
-| EBS Root (30GB) | ~$2.40 |
-| EBS Data (8GB) | ~$0.64 |
-| ECR Storage | ~$0.10/GB |
-| **Total** | **~$3-4/month** |
+| **CX22** (2 vCPU, 4GB RAM, 40GB SSD) | ~€3.99 |
+| Volume (10GB) | ~€0.48 |
+| GHCR | Free (public repo) |
+| **Total** | **~€4.47/month** |
 
 ---
 
 ## How It Works
 
-1. **Terraform** creates: EC2, VPC, ECR repos, EBS volumes
-2. **GitHub Actions** builds ARM64 images and pushes to ECR
-3. **EC2** automatically pulls images from ECR and runs them
+1. **Terraform** creates: Hetzner server, firewall, persistent volume
+2. **GitHub Actions** builds AMD64 images and pushes to GHCR
+3. **Server** pulls images from GHCR via SSH deploy
 4. Every push to `main`/`master` triggers auto-deploy
 
 ---
 
-## Step 1: Generate Secrets
+## Step 1: Prerequisites
 
 ```powershell
 # Generate two secrets (copy each output)
 openssl rand -hex 32   # JWT_SECRET
 openssl rand -hex 32   # ENCRYPTION_KEY
+
+# Generate SSH key pair for deployment (no passphrase)
+ssh-keygen -t ed25519 -C "octopus-deploy" -f ~/.ssh/octopus_deploy -N ""
 ```
+
+Get a Hetzner API token: [console.hetzner.cloud](https://console.hetzner.cloud) > Project > Security > API Tokens > Generate API Token (Read & Write).
 
 ---
 
 ## Step 2: Configure Terraform
 
 ```powershell
-cd c:\Users\danie\Documents\github\octopus_api_controller\terraform
-copy terraform.tfvars.example terraform.tfvars
+cd terraform
 ```
 
 Edit `terraform.tfvars`:
 ```hcl
-jwt_secret     = "paste-your-first-secret-here"
-encryption_key = "paste-your-second-secret-here"
+hcloud_token   = "your-hetzner-api-token"
+ssh_public_key = "ssh-ed25519 AAAA... (paste contents of ~/.ssh/octopus_deploy.pub)"
 ```
 
 ---
@@ -55,14 +58,11 @@ terraform init
 terraform apply
 ```
 
-Type `yes` when prompted. Wait 3-5 minutes.
+Type `yes` when prompted. Wait 3-5 minutes for cloud-init to complete.
 
 **Save the outputs** - you'll need them for GitHub secrets:
 ```
-public_ip        = "54.xxx.xxx.xxx"
-instance_id      = "i-0abc123..."
-ecr_backend_url  = "123456789.dkr.ecr.us-east-1.amazonaws.com/octopus-controller/backend"
-ecr_frontend_url = "123456789.dkr.ecr.us-east-1.amazonaws.com/octopus-controller/frontend"
+server_ip = "49.12.xxx.xxx"
 ```
 
 ---
@@ -71,15 +71,16 @@ ecr_frontend_url = "123456789.dkr.ecr.us-east-1.amazonaws.com/octopus-controller
 
 Go to your GitHub repo: **Settings > Secrets and variables > Actions**
 
-Add these 5 secrets:
+Add these secrets:
 
 | Secret Name | Value |
 |-------------|-------|
-| `AWS_ACCESS_KEY_ID` | Your AWS access key |
-| `AWS_SECRET_ACCESS_KEY` | Your AWS secret key |
-| `EC2_INSTANCE_ID` | From terraform output (e.g., `i-0abc123...`) |
-| `ECR_BACKEND_URL` | From terraform output |
-| `ECR_FRONTEND_URL` | From terraform output |
+| `HETZNER_SSH_PRIVATE_KEY` | Contents of `~/.ssh/octopus_deploy` (private key) |
+| `SERVER_IP` | From terraform output |
+| `GOOGLE_CLIENT_ID` | Your Google OAuth Client ID |
+| `JWT_SECRET` | Generated in Step 1 |
+| `ENCRYPTION_KEY` | Generated in Step 1 |
+| `FRONTEND_URL` | `https://switchopus.com` or `http://SERVER_IP` |
 
 ---
 
@@ -88,14 +89,14 @@ Add these 5 secrets:
 Push to `main` or `master` branch:
 ```powershell
 git add .
-git commit -m "Deploy to AWS"
+git commit -m "Deploy to Hetzner"
 git push
 ```
 
 GitHub Actions will:
-1. Build ARM64 Docker images
-2. Push to ECR
-3. SSH into EC2 and pull new images
+1. Build AMD64 Docker images
+2. Push to GHCR
+3. SSH into server and pull new images
 4. Restart containers
 
 **First deploy takes ~10 minutes** (subsequent deploys ~3 minutes).
@@ -107,15 +108,15 @@ GitHub Actions will:
 Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
 
 1. Find your OAuth 2.0 Client ID
-2. Add **Authorized JavaScript origins**: `http://YOUR_PUBLIC_IP`
-3. Add **Authorized redirect URIs**: `http://YOUR_PUBLIC_IP`
+2. Add **Authorized JavaScript origins**: your FRONTEND_URL
+3. Add **Authorized redirect URIs**: your FRONTEND_URL
 
 ---
 
 ## Step 7: Access Your App
 
 ```
-http://YOUR_PUBLIC_IP
+http://YOUR_SERVER_IP
 ```
 
 ---
@@ -123,7 +124,7 @@ http://YOUR_PUBLIC_IP
 ## Auto-Deploy Flow
 
 ```
-Code Push → GitHub Actions → Build ARM64 Images → Push to ECR → SSM to EC2 → Pull & Restart
+Code Push → GitHub Actions → Build Images → Push to GHCR → SSH to Server → Pull & Restart
 ```
 
 Every push to main/master automatically deploys. No manual SSH needed.
@@ -132,21 +133,21 @@ Every push to main/master automatically deploys. No manual SSH needed.
 
 ## Manual Commands
 
-### Connect to EC2 (if needed)
+### Connect to Server
 ```powershell
-aws ssm start-session --target i-0abc123...
+ssh -i ~/.ssh/octopus_deploy root@YOUR_SERVER_IP
 ```
 
 ### View Logs
 ```bash
-sudo su -
 cd /opt/octopus-controller
 docker compose logs -f
 ```
 
-### Force Update
+### Force Redeploy
 ```bash
-./update.sh
+cd /opt/octopus-controller
+./deploy.sh
 ```
 
 ### Check Status
@@ -162,25 +163,25 @@ docker compose ps
 terraform destroy
 ```
 
-**Warning**: This deletes your database!
+**Warning**: This deletes your server and database volume!
 
 ---
 
 ## Troubleshooting
 
 ### GitHub Actions failing?
-- Check secrets are set correctly
-- Check AWS credentials have ECR and SSM permissions
+- Check secrets are set correctly in repo settings
+- Ensure GHCR packages are public (repo Settings > Packages)
 
 ### App not starting?
 ```bash
-# On EC2
-sudo cat /var/log/user-data.log
+# On server
+cat /var/log/user-data.log
 docker compose logs backend
 ```
 
-### Images not pulling?
+### Cloud-init not finished?
 ```bash
-# Check ECR login works
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789.dkr.ecr.us-east-1.amazonaws.com
+# Check if cloud-init is still running
+cloud-init status
 ```

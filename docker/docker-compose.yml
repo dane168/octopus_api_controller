@@ -5,8 +5,6 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.backend
-      platforms:
-        - linux/arm64
     container_name: octopus-backend
     restart: unless-stopped
     environment:
@@ -41,8 +39,6 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
-      platforms:
-        - linux/arm64
     container_name: octopus-frontend
     restart: unless-stopped
     ports:

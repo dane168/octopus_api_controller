@@ -1,153 +1,152 @@
 #!/bin/bash
 set -e
 
-# Log everything to a file for debugging
+# Log everything for debugging
 exec > >(tee /var/log/user-data.log) 2>&1
-echo "Starting user-data script at $(date)"
+echo "Starting cloud-init at $(date)"
 
-# Variables from Terraform
-GOOGLE_CLIENT_ID="${google_client_id}"
-JWT_SECRET="${jwt_secret}"
-ENCRYPTION_KEY="${encryption_key}"
-LOG_LEVEL="${log_level}"
-ECR_BACKEND_URL="${ecr_backend_url}"
-ECR_FRONTEND_URL="${ecr_frontend_url}"
-AWS_REGION="${aws_region}"
+# Variables from Terraform templatefile()
+GHCR_OWNER="${ghcr_owner}"
 CUSTOM_DOMAIN="${custom_domain}"
+VOLUME_DEVICE="${volume_device}"
 
 # Update system
-dnf update -y
-
-# Install SSM Agent (required for AWS Systems Manager)
-dnf install -y amazon-ssm-agent
-systemctl enable amazon-ssm-agent
-systemctl start amazon-ssm-agent
+apt-get update
+apt-get upgrade -y
 
 # Install Docker
-dnf install -y docker
+apt-get install -y ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
 
-# Start and enable Docker
-systemctl start docker
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
 systemctl enable docker
+systemctl start docker
 
-# Install Docker Compose v2
-mkdir -p /usr/local/lib/docker/cli-plugins
-curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64" -o /usr/local/lib/docker/cli-plugins/docker-compose
-chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+# Mount persistent volume for SQLite
+echo "Mounting data volume..."
+mkdir -p /data/octopus
 
-# Add ec2-user to docker group
-usermod -aG docker ec2-user
-
-# Wait for EBS volume to be attached
-echo "Waiting for EBS volume..."
-while [ ! -b /dev/xvdf ] && [ ! -b /dev/nvme1n1 ]; do
-  sleep 5
+# Wait for volume device to appear
+for i in $(seq 1 30); do
+  if [ -b "$VOLUME_DEVICE" ]; then
+    break
+  fi
+  echo "Waiting for volume device ($i/30)..."
+  sleep 2
 done
 
-# Determine the actual device name (can be xvdf or nvme1n1 depending on instance type)
-if [ -b /dev/nvme1n1 ]; then
-  DEVICE=/dev/nvme1n1
-else
-  DEVICE=/dev/xvdf
+# Only format if no filesystem exists (preserve data on redeploy)
+if ! blkid "$VOLUME_DEVICE" | grep -q ext4; then
+  echo "Creating ext4 filesystem on $VOLUME_DEVICE"
+  mkfs.ext4 "$VOLUME_DEVICE"
 fi
 
-# Check if volume has a filesystem, if not create one
-if ! blkid $DEVICE; then
-  echo "Creating filesystem on $DEVICE"
-  mkfs.ext4 $DEVICE
-fi
+mount "$VOLUME_DEVICE" /data/octopus
+echo "$VOLUME_DEVICE /data/octopus ext4 defaults,nofail 0 2" >> /etc/fstab
 
-# Create mount point and mount the volume
-mkdir -p /data/octopus
-mount $DEVICE /data/octopus
-
-# Add to fstab for persistence across reboots
-echo "$DEVICE /data/octopus ext4 defaults,nofail 0 2" >> /etc/fstab
-
-# Set permissions
+# Set permissions for Node.js container (runs as uid 1000)
 chown -R 1000:1000 /data/octopus
 
 # Create app directory
 mkdir -p /opt/octopus-controller
 cd /opt/octopus-controller
 
-# Get public IP
-PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-
-# Use custom domain if provided, otherwise fall back to nip.io
+# Determine frontend URL
 if [ -n "$CUSTOM_DOMAIN" ]; then
   FRONTEND_URL="https://$CUSTOM_DOMAIN"
-  echo "Using custom domain: $CUSTOM_DOMAIN"
 else
-  FRONTEND_URL="http://$(echo $PUBLIC_IP | tr '.' '-').nip.io"
-  echo "Using nip.io URL: $FRONTEND_URL"
+  PUBLIC_IP=$(curl -s http://169.254.169.254/hetzner/v1/metadata/public-ipv4 || hostname -I | awk '{print $1}')
+  FRONTEND_URL="http://$PUBLIC_IP"
 fi
 
-echo "Public IP: $PUBLIC_IP"
-echo "Frontend URL: $FRONTEND_URL"
-
-# Create environment file
+# Create placeholder .env (GitHub Actions will overwrite with real secrets at deploy time)
 cat > .env << EOF
-GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
-JWT_SECRET=$JWT_SECRET
-ENCRYPTION_KEY=$ENCRYPTION_KEY
-LOG_LEVEL=$LOG_LEVEL
+GOOGLE_CLIENT_ID=placeholder
+JWT_SECRET=placeholder
+ENCRYPTION_KEY=placeholder
+LOG_LEVEL=info
 FRONTEND_URL=$FRONTEND_URL
 EOF
 
-# Store ECR URLs for deploy script
-cat > .ecr_config << EOF
-ECR_BACKEND_URL=$ECR_BACKEND_URL
-ECR_FRONTEND_URL=$ECR_FRONTEND_URL
-AWS_REGION=$AWS_REGION
-EOF
-
-# Create docker-compose file that uses ECR images
+# Create docker-compose.yml using GHCR images
 cat > docker-compose.yml << COMPOSE
 services:
   backend:
-    image: $ECR_BACKEND_URL:latest
+    image: ghcr.io/$GHCR_OWNER/octopus-controller-backend:latest
+    container_name: octopus-backend
     restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - DATABASE_PATH=/data/octopus-controller.db
     env_file:
       - .env
     volumes:
       - /data/octopus:/data
+    expose:
+      - "8000"
     networks:
-      - app-network
+      - octopus-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 256M
 
   frontend:
-    image: $ECR_FRONTEND_URL:latest
+    image: ghcr.io/$GHCR_OWNER/octopus-controller-frontend:latest
+    container_name: octopus-frontend
     restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
-      - app-network
+      - octopus-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 32M
 
 networks:
-  app-network:
+  octopus-network:
     driver: bridge
 COMPOSE
 
-# Create deploy script (used by GitHub Actions via SSM)
-# This script just pulls latest images and restarts - no building required!
-cat > /opt/octopus-controller/deploy.sh << 'DEPLOYSCRIPT'
+# Create deploy script (called via SSH by GitHub Actions)
+cat > deploy.sh << 'DEPLOYSCRIPT'
 #!/bin/bash
 set -e
 cd /opt/octopus-controller
 
-# Load ECR config
-source .ecr_config
-
-# Login to ECR
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_BACKEND_URL
-
-# Pull latest images
-echo "Pulling latest images from ECR..."
+echo "Pulling latest images from GHCR..."
 docker compose pull
 
-# Restart containers with new images
 echo "Restarting containers..."
 docker compose down || true
 docker compose up -d
@@ -159,7 +158,7 @@ echo "Deploy completed at $(date)"
 docker ps
 DEPLOYSCRIPT
 
-chmod +x /opt/octopus-controller/deploy.sh
+chmod +x deploy.sh
 
 # Create systemd service for auto-start on reboot
 cat > /etc/systemd/system/octopus-controller.service << 'SERVICE'
@@ -173,9 +172,8 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/octopus-controller
-ExecStartPre=/bin/bash -c 'source /opt/octopus-controller/.ecr_config && aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_BACKEND_URL'
-ExecStart=/usr/local/lib/docker/cli-plugins/docker-compose up -d
-ExecStop=/usr/local/lib/docker/cli-plugins/docker-compose down
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
 
 [Install]
 WantedBy=multi-user.target
@@ -185,14 +183,7 @@ systemctl daemon-reload
 systemctl enable octopus-controller.service
 
 echo "============================================"
-echo "User-data script completed at $(date)"
-echo "EC2 instance is ready!"
-echo ""
+echo "Cloud-init completed at $(date)"
+echo "Server is ready for deployment via GitHub Actions"
 echo "FRONTEND_URL: $FRONTEND_URL"
-echo ""
-echo "Add this to Google OAuth:"
-echo "  Authorized JavaScript origins: $FRONTEND_URL"
-echo "  Authorized redirect URIs: $FRONTEND_URL"
-echo ""
-echo "Push code to trigger GitHub Actions build and deploy"
 echo "============================================"

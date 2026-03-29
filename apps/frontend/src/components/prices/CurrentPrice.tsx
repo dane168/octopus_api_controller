@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { getTimezoneAbbr } from '../../utils/timezone';
 import type { Price } from '@octopus-controller/shared';
 
 interface CurrentPriceProps {
@@ -37,7 +38,7 @@ function getPriceLabel(price: number): string {
 function formatTimeRange(from: string, to: string): string {
   const formatTime = (iso: string) =>
     new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  return `${formatTime(from)} - ${formatTime(to)}`;
+  return `${formatTime(from)} - ${formatTime(to)} ${getTimezoneAbbr()}`;
 }
 
 export function CurrentPrice({ price, nextPrice, isLoading }: CurrentPriceProps) {

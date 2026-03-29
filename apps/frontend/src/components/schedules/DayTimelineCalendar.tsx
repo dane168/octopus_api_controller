@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Clock, Power, AlertTriangle } from 'lucide-react';
+import { getTimezoneAbbr } from '../../utils/timezone';
 import type { EffectiveDeviceSchedule, ScheduleConflict } from '@octopus-controller/shared';
 
 interface DayTimelineCalendarProps {
@@ -74,7 +75,7 @@ export function DayTimelineCalendar({ effectiveSchedules, conflicts }: DayTimeli
         <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
         <h3 className="font-medium text-gray-900 dark:text-gray-100">Daily Schedule Timeline</h3>
         <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-          Now: {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          Now: {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} {getTimezoneAbbr()}
         </span>
       </div>
 

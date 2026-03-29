@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { History, Loader2, CheckCircle, XCircle, Filter, RefreshCw } from 'lucide-react';
 import { useAllLogs } from '../hooks/useSchedules';
+import { getTimezoneAbbr } from '../utils/timezone';
 import type { EnrichedScheduleLog } from '@octopus-controller/shared';
 
-function formatLogTime(iso: string): string {
+function formatLogTime(iso: string, tzAbbr?: string): string {
   const date = new Date(iso);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
@@ -12,13 +13,14 @@ function formatLogTime(iso: string): string {
   const isYesterday = date.toDateString() === yesterday.toDateString();
 
   const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const tz = tzAbbr ? ` ${tzAbbr}` : '';
 
   if (isToday) {
-    return `Today ${time}`;
+    return `Today ${time}${tz}`;
   } else if (isYesterday) {
-    return `Yesterday ${time}`;
+    return `Yesterday ${time}${tz}`;
   } else {
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ` ${time}`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ` ${time}${tz}`;
   }
 }
 
@@ -64,7 +66,7 @@ function LogRow({ log }: { log: EnrichedScheduleLog }) {
           )}
         </div>
         <div className="text-sm text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0">
-          {formatLogTime(log.executedAt)}
+          {formatLogTime(log.executedAt, getTimezoneAbbr())}
         </div>
       </div>
     </div>
@@ -90,7 +92,7 @@ export function Logs() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Execution Logs</h1>
-          <p className="text-gray-500 dark:text-gray-400">View all schedule execution history</p>
+          <p className="text-gray-500 dark:text-gray-400">View all schedule execution history <span className="text-xs font-medium text-blue-600 dark:text-blue-400">({getTimezoneAbbr()})</span></p>
         </div>
         <button
           onClick={() => refetch()}

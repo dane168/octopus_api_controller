@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
-import { Plug, Plus, Power, Trash2, Wifi, WifiOff, Loader2, X, Upload, Edit2, RefreshCw, Lightbulb, Cloud } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Plug, Plus, Trash2, Wifi, WifiOff, Loader2, X, Upload, Edit2, RefreshCw, Lightbulb, Cloud } from 'lucide-react';
 import { useDevices, useCreateDevice, useUpdateDevice, useDeleteDevice, useControlDevice, useImportDevices, useCheckDeviceStatus } from '../hooks/useDevices';
 // Note: useTestConnection removed - not needed for cloud-only protocol
 import { useImportDevicesFromCloud } from '../hooks/useTuya';
+import { getTimezoneAbbr } from '../utils/timezone';
 import type { Device, DeviceType, CreateDeviceInput, UpdateDeviceInput } from '@octopus-controller/shared';
 
 const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
@@ -94,28 +95,27 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          <button
-            onClick={() => onControl('on')}
-            disabled={isControlling}
-            className="btn btn-sm bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white disabled:opacity-50"
-          >
-            {isControlling ? <Loader2 className="w-4 h-4 animate-spin" /> : 'On'}
-          </button>
-          <button
-            onClick={() => onControl('off')}
-            disabled={isControlling}
-            className="btn btn-sm bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white disabled:opacity-50"
-          >
-            {isControlling ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Off'}
-          </button>
-          <button
-            onClick={() => onControl('toggle')}
-            disabled={isControlling}
-            className="btn btn-sm btn-secondary disabled:opacity-50"
-          >
-            <Power className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-3">
+          {isControlling ? (
+            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+          ) : (
+            <button
+              onClick={() => onControl(powerState ? 'off' : 'on')}
+              disabled={isControlling || powerState === null}
+              className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: powerState === null ? '#9ca3af' : powerState ? '#22c55e' : '#6b7280' }}
+              title={powerState === null ? 'Status unknown' : powerState ? 'Turn off' : 'Turn on'}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${
+                  powerState ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          )}
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            {powerState === null ? 'Unknown' : powerState ? 'ON' : 'OFF'}
+          </span>
         </div>
         <button
           onClick={onDelete}
@@ -127,7 +127,7 @@ function DeviceCard({ device, onControl, onDelete, onEdit, onCheckStatus, isCont
 
       {device.lastSeen && (
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-          Last seen: {new Date(device.lastSeen).toLocaleString()}
+          Last seen: {new Date(device.lastSeen).toLocaleString('en-GB')} {getTimezoneAbbr()}
         </p>
       )}
     </div>
@@ -372,6 +372,37 @@ export function Devices() {
   const importMutation = useImportDevices();
   const checkStatusMutation = useCheckDeviceStatus();
   const importFromCloudMutation = useImportDevicesFromCloud();
+
+  // Auto-check status for all devices on page load (staggered to be gentle on Tuya API)
+  const [autoChecked, setAutoChecked] = useState(false);
+  const handleCheckStatusForAuto = useCallback(async (deviceId: string) => {
+    try {
+      const result = await checkStatusMutation.mutateAsync(deviceId);
+      if (result.state) {
+        setDevicePowerStates(prev => ({ ...prev, [deviceId]: result.state.power }));
+      }
+    } catch {
+      setDevicePowerStates(prev => ({ ...prev, [deviceId]: null }));
+    }
+  }, [checkStatusMutation]);
+
+  useEffect(() => {
+    if (!devices || devices.length === 0 || autoChecked) return;
+    setAutoChecked(true);
+
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < devices.length; i++) {
+        if (cancelled) break;
+        await handleCheckStatusForAuto(devices[i].id);
+        // Stagger requests by 500ms to avoid hitting Tuya API rate limits
+        if (i < devices.length - 1) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [devices, autoChecked, handleCheckStatusForAuto]);
 
   const handleControl = async (deviceId: string, action: 'on' | 'off' | 'toggle') => {
     setControllingDeviceId(deviceId);

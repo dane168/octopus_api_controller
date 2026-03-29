@@ -3,6 +3,7 @@ import { useAvailablePrices, useCurrentPrice, useRefreshPrices, useCheapestHours
 import { useSettings } from '../hooks/useSettings';
 import { PriceChart } from '../components/prices/PriceChart';
 import { CurrentPrice } from '../components/prices/CurrentPrice';
+import { getTimezoneAbbr } from '../utils/timezone';
 import type { Price } from '@octopus-controller/shared';
 
 export function Dashboard() {
@@ -40,6 +41,7 @@ export function Dashboard() {
             {settings?.region
               ? `Region ${settings.region} - Octopus Agile`
               : 'Configure your region in Settings'}
+            {settings?.region && <span className="text-xs font-medium text-blue-600 dark:text-blue-400 ml-2">({getTimezoneAbbr(settings?.timezone)})</span>}
           </p>
         </div>
         <button

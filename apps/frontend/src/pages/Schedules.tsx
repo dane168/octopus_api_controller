@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Calendar, Plus, Trash2, Power, Clock, Loader2, X, ToggleLeft, ToggleRight, Zap, History, CheckCircle, XCircle, Pencil, AlertTriangle, Layers } from 'lucide-react';
 import { useSchedules, useCreateSchedule, useUpdateSchedule, useDeleteSchedule, useToggleSchedule, useScheduleLogs, useEffectiveSchedules } from '../hooks/useSchedules';
 import { useDevices } from '../hooks/useDevices';
+import { useSettings } from '../hooks/useSettings';
 import { useNext24HoursPrices } from '../hooks/usePrices';
 import { DayTimelineCalendar } from '../components/schedules/DayTimelineCalendar';
+import { getTimezoneAbbr } from '../utils/timezone';
 import type { Device, Price, ScheduleWithDevices, TimeSlotsConfig, DeviceAction, TimeSlot, EffectiveDeviceSchedule, ScheduleConflict, EffectiveSlot } from '@octopus-controller/shared';
 
 function formatTime(iso: string): string {
@@ -17,7 +19,7 @@ function formatSlotTime(slot: TimeSlot): string {
   return `${slot.start} - ${slot.end}`;
 }
 
-function formatLogTime(iso: string): string {
+function formatLogTime(iso: string, tzAbbr?: string): string {
   const date = new Date(iso);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
@@ -26,13 +28,14 @@ function formatLogTime(iso: string): string {
   const isYesterday = date.toDateString() === yesterday.toDateString();
 
   const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const tz = tzAbbr ? ` ${tzAbbr}` : '';
 
   if (isToday) {
-    return `Today ${time}`;
+    return `Today ${time}${tz}`;
   } else if (isYesterday) {
-    return `Yesterday ${time}`;
+    return `Yesterday ${time}${tz}`;
   } else {
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ` ${time}`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ` ${time}${tz}`;
   }
 }
 
@@ -217,7 +220,7 @@ function ScheduleLogsModal({
                       )}
                     </div>
                     <div className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                      {formatLogTime(log.executedAt)}
+                      {formatLogTime(log.executedAt, getTimezoneAbbr())}
                     </div>
                   </div>
                 </div>
@@ -302,11 +305,10 @@ function TimeSlotSelector({
           <button
             type="button"
             key={slotKey}
-            onClick={() => !isPast && onToggleSlot(slotKey, slot)}
-            disabled={isPast}
+            onClick={() => onToggleSlot(slotKey, slot)}
             className={`
-              p-2 rounded-lg border text-left transition-all
-              ${isPast ? 'opacity-40 cursor-not-allowed bg-gray-50 dark:bg-gray-700' : 'hover:border-blue-400'}
+              p-2 rounded-lg border text-left transition-all hover:border-blue-400
+              ${isPast ? 'opacity-60' : ''}
               ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'}
               ${isCurrent && !isSelected ? 'border-blue-300' : ''}
             `}
@@ -550,7 +552,8 @@ function ScheduleModal({
           {step === 2 && (
             <div className="p-4">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Select time windows (can select multiple, non-consecutive):
+                Select time windows (can select multiple, non-consecutive).
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 ml-1">All times in {getTimezoneAbbr()}</span>
               </p>
               <TimeSlotSelector
                 prices={prices}
@@ -873,6 +876,8 @@ export function Schedules() {
   const { data: effectiveData, isLoading: effectiveLoading } = useEffectiveSchedules();
   const { data: devices } = useDevices();
   const { data: prices } = useNext24HoursPrices();
+  const { data: settings } = useSettings();
+  const tzAbbr = getTimezoneAbbr(settings?.timezone);
 
   const createMutation = useCreateSchedule();
   const updateMutation = useUpdateSchedule();
@@ -959,7 +964,7 @@ export function Schedules() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Schedules</h1>
-          <p className="text-gray-500 dark:text-gray-400">Automate devices based on time slots</p>
+          <p className="text-gray-500 dark:text-gray-400">Automate devices based on time slots <span className="text-xs font-medium text-blue-600 dark:text-blue-400">({tzAbbr})</span></p>
         </div>
         {activeTab === 'schedules' && (
           <button

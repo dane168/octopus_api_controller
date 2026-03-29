@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   octopusApiKey: '',
   octopusMpan: '',
   octopusSerial: '',
+  timezone: 'Europe/London',
 };
 
 /**

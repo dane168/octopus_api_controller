@@ -185,11 +185,44 @@ function detectConflicts(slots: RawSlot[], deviceId: string, deviceName: string)
 }
 
 /**
+ * Get today's date string (YYYY-MM-DD) in a specific timezone
+ */
+function getTodayInTimezone(timezone: string): string {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: timezone,
+  }).formatToParts(now);
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get hours and minutes of a Date in a specific IANA timezone
+ */
+function getTimeInTimezone(date: Date, timezone: string): { hours: number; minutes: number } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+    timeZone: timezone,
+  }).formatToParts(date);
+  const hours = Number(parts.find(p => p.type === 'hour')?.value ?? 0);
+  const minutes = Number(parts.find(p => p.type === 'minute')?.value ?? 0);
+  return { hours, minutes };
+}
+
+/**
  * Resolve all enabled schedules into effective schedules per device
  * This merges adjacent time slots and detects conflicts
  */
 export async function resolveSchedules(
-  schedules: Schedule[]
+  schedules: Schedule[],
+  timezoneMap?: Map<string, string>
 ): Promise<{
   effectiveSchedules: EffectiveDeviceSchedule[];
   conflicts: ScheduleConflict[];
@@ -207,9 +240,10 @@ export async function resolveSchedules(
 
     const config = schedule.config as TimeSlotsConfig;
 
-    // For 'once' schedules, check if it's today
+    // For 'once' schedules, check if it's today (in the user's timezone)
     if (config.repeat === 'once' && config.date) {
-      const today = new Date().toISOString().split('T')[0];
+      const timezone = timezoneMap?.get(schedule.userId) || 'Europe/London';
+      const today = getTodayInTimezone(timezone);
       if (config.date !== today) continue;
     }
 
@@ -270,9 +304,11 @@ export async function resolveSchedules(
  */
 export function getEffectiveActionForDevice(
   effectiveSchedule: EffectiveDeviceSchedule,
-  now: Date
+  now: Date,
+  timezone: string = 'Europe/London'
 ): { action: DeviceAction; slot: EffectiveSlot } | null {
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const { hours, minutes } = getTimeInTimezone(now, timezone);
+  const currentMinutes = hours * 60 + minutes;
 
   for (const slot of effectiveSchedule.slots) {
     const slotStart = timeToMinutes(slot.start);
@@ -296,9 +332,11 @@ export function getEffectiveActionForDevice(
  */
 export function getEndingSlotForDevice(
   effectiveSchedule: EffectiveDeviceSchedule,
-  now: Date
+  now: Date,
+  timezone: string = 'Europe/London'
 ): EffectiveSlot | null {
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const { hours, minutes } = getTimeInTimezone(now, timezone);
+  const currentMinutes = hours * 60 + minutes;
 
   for (const slot of effectiveSchedule.slots) {
     let slotEnd = timeToMinutes(slot.end);

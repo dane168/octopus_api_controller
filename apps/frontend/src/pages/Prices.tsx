@@ -1,4 +1,4 @@
-import { useNext24HoursPrices, useCheapestHours } from '../hooks/usePrices';
+import { useAvailablePrices, useCheapestHours } from '../hooks/usePrices';
 import { PriceChart } from '../components/prices/PriceChart';
 import { Clock, Zap } from 'lucide-react';
 import type { Price } from '@octopus-controller/shared';
@@ -55,7 +55,7 @@ function PriceSlot({ price, isCheapest }: { price: Price; isCheapest: boolean })
 }
 
 export function Prices() {
-  const { data: prices, isLoading } = useNext24HoursPrices();
+  const { data: prices, isLoading } = useAvailablePrices();
   const { data: cheapestSlots } = useCheapestHours(3); // Cheapest 3 hours
 
   const cheapestIds = new Set(cheapestSlots?.map((p) => p.validFrom) || []);
@@ -72,7 +72,7 @@ export function Prices() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Prices</h1>
-        <p className="text-gray-500 dark:text-gray-400">Next 24 hours of half-hourly electricity prices</p>
+        <p className="text-gray-500 dark:text-gray-400">Upcoming half-hourly electricity prices</p>
       </div>
 
       {/* Chart */}

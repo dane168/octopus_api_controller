@@ -1,12 +1,12 @@
 import { RefreshCw } from 'lucide-react';
-import { useNext24HoursPrices, useCurrentPrice, useRefreshPrices, useCheapestHours } from '../hooks/usePrices';
+import { useAvailablePrices, useCurrentPrice, useRefreshPrices, useCheapestHours } from '../hooks/usePrices';
 import { useSettings } from '../hooks/useSettings';
 import { PriceChart } from '../components/prices/PriceChart';
 import { CurrentPrice } from '../components/prices/CurrentPrice';
 import type { Price } from '@octopus-controller/shared';
 
 export function Dashboard() {
-  const { data: prices, isLoading: pricesLoading } = useNext24HoursPrices();
+  const { data: prices, isLoading: pricesLoading } = useAvailablePrices();
   const { data: currentPrice, isLoading: currentLoading } = useCurrentPrice();
   const { data: settings } = useSettings();
   const { data: cheapestSlots } = useCheapestHours(3); // Cheapest 3 hours
@@ -76,7 +76,7 @@ export function Dashboard() {
 
       {/* Price chart */}
       <div className="card p-4 md:p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Next 24 Hours</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Upcoming Prices</h2>
         {pricesLoading ? (
           <div className="h-64 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>

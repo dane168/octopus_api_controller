@@ -242,6 +242,23 @@ function ScheduleLogsModal({
   );
 }
 
+/**
+ * Generate all 48 half-hour slots for a full day (00:00 - 23:30)
+ */
+function generateAllDaySlots(): { start: string; end: string }[] {
+  const slots: { start: string; end: string }[] = [];
+  for (let i = 0; i < 48; i++) {
+    const startHour = Math.floor(i / 2);
+    const startMin = (i % 2) * 30;
+    const endHour = Math.floor((i + 1) / 2);
+    const endMin = ((i + 1) % 2) * 30;
+    const start = `${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
+    const end = i === 47 ? '00:00' : `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+    slots.push({ start, end });
+  }
+  return slots;
+}
+
 function TimeSlotSelector({
   prices,
   selectedSlots,
@@ -252,25 +269,39 @@ function TimeSlotSelector({
   onToggleSlot: (slotKey: string, slot: TimeSlot) => void;
 }) {
   const now = new Date();
+  const allSlots = generateAllDaySlots();
+
+  // Build a lookup map from HH:MM start time to price
+  const priceMap = new Map<string, Price>();
+  for (const price of prices) {
+    const key = formatTime(price.validFrom);
+    priceMap.set(key, price);
+  }
+
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto p-1">
-      {prices.map((price) => {
-        const from = new Date(price.validFrom);
-        const to = new Date(price.validTo);
-        const isPast = to < now;
-        const isCurrent = now >= from && now < to;
-        const slotKey = `${formatTime(price.validFrom)}-${formatTime(price.validTo)}`;
-        const slot: TimeSlot = {
-          start: formatTime(price.validFrom),
-          end: formatTime(price.validTo),
-        };
+      {allSlots.map(({ start, end }) => {
+        const slotKey = `${start}-${end}`;
+        const slot: TimeSlot = { start, end };
+        const price = priceMap.get(start);
         const isSelected = selectedSlots.has(slotKey);
+
+        // Calculate if this slot is in the past
+        const [sh, sm] = start.split(':').map(Number);
+        const [eh, em] = end.split(':').map(Number);
+        const slotEndMinutes = end === '00:00' ? 24 * 60 : eh * 60 + em;
+        const isPast = slotEndMinutes <= currentMinutes;
+
+        // Check if this is the current slot
+        const slotStartMinutes = sh * 60 + sm;
+        const isCurrent = currentMinutes >= slotStartMinutes && currentMinutes < slotEndMinutes;
 
         return (
           <button
             type="button"
-            key={price.validFrom}
+            key={slotKey}
             onClick={() => !isPast && onToggleSlot(slotKey, slot)}
             disabled={isPast}
             className={`
@@ -282,15 +313,21 @@ function TimeSlotSelector({
           >
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                {formatTime(price.validFrom)}
+                {start}
               </span>
               {isCurrent && (
                 <span className="text-[10px] bg-blue-600 text-white px-1 rounded">NOW</span>
               )}
             </div>
             <div className="flex items-center gap-1">
-              <div className={`w-2 h-2 rounded-full ${getPriceColor(price.valueIncVat)}`} />
-              <span className="text-sm font-semibold">{price.valueIncVat.toFixed(1)}p</span>
+              {price ? (
+                <>
+                  <div className={`w-2 h-2 rounded-full ${getPriceColor(price.valueIncVat)}`} />
+                  <span className="text-sm font-semibold">{price.valueIncVat.toFixed(1)}p</span>
+                </>
+              ) : (
+                <span className="text-xs text-gray-400 dark:text-gray-500">No data</span>
+              )}
             </div>
           </button>
         );
@@ -515,17 +552,11 @@ function ScheduleModal({
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Select time windows (can select multiple, non-consecutive):
               </p>
-              {prices.length > 0 ? (
-                <TimeSlotSelector
-                  prices={prices}
-                  selectedSlots={new Set(selectedSlots.keys())}
-                  onToggleSlot={handleToggleSlot}
-                />
-              ) : (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No price data available. Refresh prices first.
-                </div>
-              )}
+              <TimeSlotSelector
+                prices={prices}
+                selectedSlots={new Set(selectedSlots.keys())}
+                onToggleSlot={handleToggleSlot}
+              />
             </div>
           )}
 

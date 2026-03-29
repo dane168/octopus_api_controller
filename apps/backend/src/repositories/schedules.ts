@@ -39,6 +39,7 @@ function parseDeviceIds(deviceIdsJson: string): string[] {
 function mapRowToSchedule(row: typeof schema.schedules.$inferSelect): Schedule {
   return {
     id: row.id,
+    userId: row.userId,
     deviceIds: parseDeviceIds(row.deviceIds),
     name: row.name,
     enabled: row.enabled ?? true,

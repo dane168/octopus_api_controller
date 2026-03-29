@@ -15,6 +15,7 @@ const updateSettingsSchema = z.object({
   octopusApiKey: z.string().min(1, 'API Key is required'),
   octopusMpan: z.string().optional(),
   octopusSerial: z.string().optional(),
+  timezone: z.string().optional(),
 });
 
 /**

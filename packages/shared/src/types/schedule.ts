@@ -70,6 +70,7 @@ export type ScheduleConfig = PriceThresholdConfig | CheapestHoursConfig | TimeRa
  */
 export interface Schedule {
   id: string;
+  userId: string;             // Owner user ID
   deviceIds: string[];        // Array of device IDs (supports multiple devices)
   name: string;
   enabled: boolean;

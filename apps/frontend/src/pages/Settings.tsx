@@ -35,6 +35,7 @@ export function Settings() {
   const importDevicesMutation = useImportDevicesFromSpace();
 
   const [region, setRegion] = useState('');
+  const [timezone, setTimezone] = useState('Europe/London');
   const [octopusApiKey, setOctopusApiKey] = useState('');
   const [octopusMpan, setOctopusMpan] = useState('');
   const [octopusSerial, setOctopusSerial] = useState('');
@@ -53,6 +54,13 @@ export function Settings() {
 
   useEffect(() => {
     if (settings?.region) setRegion(settings.region);
+    if (settings?.timezone) {
+      setTimezone(settings.timezone);
+    } else {
+      // Auto-detect timezone from browser if not yet saved
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setTimezone(detected || 'Europe/London');
+    }
     if (settings?.octopusApiKey) {
       const raw = settings.octopusApiKey;
       if (raw.startsWith('***')) {
@@ -91,7 +99,7 @@ export function Settings() {
 
   const handleSave = async () => {
     if (!region) return;
-    const updates: any = { region, octopusMpan, octopusSerial };
+    const updates: any = { region, timezone, octopusMpan, octopusSerial };
     if (octopusApiKey) {
       updates.octopusApiKey = octopusApiKey;
     }
@@ -447,6 +455,54 @@ export function Settings() {
             </select>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               You can find your region on your electricity bill or by checking your postcode.
+            </p>
+          </div>
+
+          {/* Timezone */}
+          <div>
+            <label htmlFor="timezone" className="label">
+              Timezone
+            </label>
+            <select
+              id="timezone"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="input"
+            >
+              {[
+                'Europe/London',
+                'Europe/Dublin',
+                'Europe/Paris',
+                'Europe/Berlin',
+                'Europe/Amsterdam',
+                'Europe/Brussels',
+                'Europe/Madrid',
+                'Europe/Rome',
+                'Europe/Lisbon',
+                'Europe/Athens',
+                'Europe/Helsinki',
+                'Europe/Stockholm',
+                'Europe/Oslo',
+                'Europe/Warsaw',
+                'Europe/Zurich',
+                'America/New_York',
+                'America/Chicago',
+                'America/Denver',
+                'America/Los_Angeles',
+                'Asia/Tokyo',
+                'Asia/Shanghai',
+                'Asia/Kolkata',
+                'Australia/Sydney',
+                'Pacific/Auckland',
+                'UTC',
+              ].map((tz) => (
+                <option key={tz} value={tz}>
+                  {tz.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Used for schedule execution timing. Auto-detected from your browser.
             </p>
           </div>
 

@@ -19,6 +19,15 @@ export function useNext24HoursPrices() {
   });
 }
 
+export function useAvailablePrices() {
+  return useQuery({
+    queryKey: ['prices', 'available'],
+    queryFn: () => pricesApi.getAvailablePrices(),
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useCurrentPrice() {
   return useQuery({
     queryKey: ['prices', 'current'],

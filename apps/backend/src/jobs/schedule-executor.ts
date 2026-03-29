@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import * as scheduleRepo from '../repositories/schedules.js';
 import * as devicesRepo from '../repositories/devices.js';
+import * as settingsRepo from '../repositories/settings.js';
 import * as tuyaService from '../services/tuya/index.js';
 import { resolveSchedules } from '../services/schedule-resolver.js';
 import { logger } from '../utils/logger.js';
@@ -15,18 +16,35 @@ function timeToMinutes(time: string): number {
 }
 
 /**
+ * Get hours and minutes of a Date in a specific IANA timezone
+ */
+function getTimeInTimezone(date: Date, timezone: string): { hours: number; minutes: number } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+    timeZone: timezone,
+  }).formatToParts(date);
+  const hours = Number(parts.find(p => p.type === 'hour')?.value ?? 0);
+  const minutes = Number(parts.find(p => p.type === 'minute')?.value ?? 0);
+  return { hours, minutes };
+}
+
+/**
  * Check if it's the exact start of a slot (at the exact minute)
  */
-function isSlotStart(slot: { start: string }, now: Date): boolean {
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+function isSlotStart(slot: { start: string }, now: Date, timezone: string): boolean {
+  const { hours, minutes } = getTimeInTimezone(now, timezone);
+  const currentMinutes = hours * 60 + minutes;
   return currentMinutes === timeToMinutes(slot.start);
 }
 
 /**
  * Check if it's the exact end of a slot (at the exact minute)
  */
-function isSlotEnd(slot: { end: string }, now: Date): boolean {
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+function isSlotEnd(slot: { end: string }, now: Date, timezone: string): boolean {
+  const { hours, minutes } = getTimeInTimezone(now, timezone);
+  const currentMinutes = hours * 60 + minutes;
   let endMinutes = timeToMinutes(slot.end);
 
   // Handle midnight (00:00 means end of day)
@@ -139,8 +157,16 @@ async function evaluateSchedules(): Promise<void> {
     const enabledSchedules = await scheduleRepo.getEnabledSchedules();
     const now = new Date();
 
+    // Build a map of userId -> timezone for all schedule owners
+    const userIds = [...new Set(enabledSchedules.map(s => s.userId))];
+    const timezoneMap = new Map<string, string>();
+    for (const userId of userIds) {
+      const settings = await settingsRepo.getSettings(userId);
+      timezoneMap.set(userId, settings.timezone || 'Europe/London');
+    }
+
     // Resolve all schedules into effective per-device schedules
-    const { effectiveSchedules, conflicts } = await resolveSchedules(enabledSchedules);
+    const { effectiveSchedules, conflicts } = await resolveSchedules(enabledSchedules, timezoneMap);
 
     // Log any conflicts (but still execute - conflicts are just warnings)
     if (conflicts.length > 0) {
@@ -149,18 +175,24 @@ async function evaluateSchedules(): Promise<void> {
 
     // Process each device's effective schedule
     for (const deviceSchedule of effectiveSchedules) {
+      // Determine timezone from the source schedules' owner
+      const ownerUserId = deviceSchedule.slots[0]?.sourceSchedules[0]?.id
+        ? enabledSchedules.find(s => s.id === deviceSchedule.slots[0].sourceSchedules[0].id)?.userId
+        : undefined;
+      const timezone = ownerUserId ? (timezoneMap.get(ownerUserId) || 'Europe/London') : 'Europe/London';
+
       for (const slot of deviceSchedule.slots) {
         const scheduleIds = slot.sourceSchedules.map((s) => s.id);
         const scheduleNames = slot.sourceSchedules.map((s) => s.name).join(', ');
 
-        if (isSlotStart(slot, now)) {
+        if (isSlotStart(slot, now, timezone)) {
           // Slot is starting
           const reason = `Merged slot ${slot.start}-${slot.end} started (from: ${scheduleNames})`;
           await executeDeviceAction(scheduleIds, deviceSchedule.deviceId, slot.action, reason);
 
           // Disable one-time schedules after execution
           await disableOnceSchedulesIfNeeded(scheduleIds, enabledSchedules);
-        } else if (isSlotEnd(slot, now) && slot.action === 'on') {
+        } else if (isSlotEnd(slot, now, timezone) && slot.action === 'on') {
           // Slot is ending - turn off devices (only for 'on' actions)
           const reason = `Merged slot ${slot.start}-${slot.end} ended (from: ${scheduleNames})`;
           await executeDeviceAction(scheduleIds, deviceSchedule.deviceId, 'off', reason);

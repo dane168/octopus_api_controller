@@ -6,6 +6,7 @@ export interface AppSettings {
   octopusApiKey?: string;     // Optional API key for consumption data
   octopusMpan?: string;       // Meter Point Administration Number
   octopusSerial?: string;     // Meter serial number
+  timezone?: string;          // IANA timezone (e.g. 'Europe/London')
 }
 
 /**

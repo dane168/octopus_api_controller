@@ -519,12 +519,12 @@ export function Devices() {
         className="hidden"
       />
 
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Devices</h1>
-          <p className="text-gray-500 dark:text-gray-400">Manage your smart home devices</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Manage your smart home devices</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={handleImportFromCloud}
             disabled={importFromCloudMutation.isPending}
@@ -536,7 +536,7 @@ export function Devices() {
             ) : (
               <Cloud className="w-4 h-4" />
             )}
-            Import from Cloud
+            <span className="hidden sm:inline">Import from Cloud</span>
           </button>
           <button
             onClick={handleImportClick}
@@ -549,14 +549,14 @@ export function Devices() {
             ) : (
               <Upload className="w-4 h-4" />
             )}
-            Import JSON
+            <span className="hidden sm:inline">Import JSON</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
             className="btn btn-primary flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Add Device
+            <span className="hidden sm:inline">Add Device</span>
           </button>
         </div>
       </div>

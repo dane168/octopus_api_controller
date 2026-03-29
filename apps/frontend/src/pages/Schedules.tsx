@@ -961,19 +961,19 @@ export function Schedules() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Schedules</h1>
-          <p className="text-gray-500 dark:text-gray-400">Automate devices based on time slots <span className="text-xs font-medium text-blue-600 dark:text-blue-400">({tzAbbr})</span></p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Automate devices based on time slots <span className="text-xs font-medium text-blue-600 dark:text-blue-400">({tzAbbr})</span></p>
         </div>
         {activeTab === 'schedules' && (
           <button
             onClick={handleOpenCreate}
             disabled={!hasDevices}
-            className="btn btn-primary flex items-center gap-2"
+            className="btn btn-primary flex items-center gap-2 flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
-            New Schedule
+            <span className="hidden sm:inline">New Schedule</span>
           </button>
         )}
       </div>
